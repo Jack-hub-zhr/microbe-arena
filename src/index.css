@@ -1,0 +1,453 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ══════════════════════════════════════════════════════════════
+   Liquid Glass 设计语言
+   材质 = 半透明玻璃 + 背景模糊 + 高光描边 + 折射（运行时注入）
+   ══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* 底层色板 */
+  --ink-0: #04070a;
+  --ink-1: #071016;
+  --ink-2: #0c1a1d;
+
+  /* 语义色 */
+  --c-photo: #a2db3c;
+  --c-decomp: #c084fc;
+  --c-symb: #2cc9ff;
+  --c-hunter: #ff8b3d;
+  --c-gather: #e8c46a;
+  --c-role-core: #ff6bd6;
+  --c-role-worker: #a2db3c;
+  --c-role-guard: #ff8b3d;
+  --c-role-brooder: #2cc9ff;
+  --c-role-nurse: #e8c46a;
+
+  /* 玻璃材质 */
+  --glass-tint: rgba(9, 24, 26, 0.42);
+  --glass-tint-strong: rgba(6, 18, 20, 0.62);
+  --glass-tint-soft: rgba(16, 34, 34, 0.26);
+  --glass-edge: rgba(255, 255, 255, 0.14);
+  --glass-edge-strong: rgba(255, 255, 255, 0.26);
+  --glass-spec: rgba(255, 255, 255, 0.55);
+  --glass-shadow: 0 18px 48px -12px rgba(0, 0, 0, 0.62), 0 2px 10px rgba(0, 0, 0, 0.35);
+  --glass-shadow-lg: 0 34px 90px -18px rgba(0, 0, 0, 0.78), 0 4px 18px rgba(0, 0, 0, 0.4);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-liquid: cubic-bezier(0.22, 1.2, 0.36, 1);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ink-0);
+  color: #dbe8e2;
+  font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* ───────── 动态背景：给玻璃提供可折射的内容 ───────── */
+
+.aurora {
+  position: fixed;
+  inset: -25%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 32% at 22% 28%, rgba(44, 201, 255, 0.24), transparent 70%),
+    radial-gradient(34% 30% at 78% 22%, rgba(162, 219, 60, 0.18), transparent 72%),
+    radial-gradient(42% 36% at 68% 78%, rgba(192, 132, 252, 0.2), transparent 74%),
+    radial-gradient(30% 26% at 18% 82%, rgba(255, 139, 61, 0.14), transparent 70%);
+  filter: blur(28px) saturate(1.25);
+  animation: aurora-drift 34s var(--ease-out-expo) infinite alternate;
+}
+
+.aurora::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 30% 40%, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px),
+    radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px);
+  background-size: 140px 140px, 200px 200px;
+  animation: aurora-drift 24s var(--ease-out-expo) infinite alternate-reverse;
+}
+
+@keyframes aurora-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(3%, -4%, 0) scale(1.08);
+  }
+  100% {
+    transform: translate3d(-3%, 3%, 0) scale(1.04);
+  }
+}
+
+/* ───────── 玻璃材质基类 ───────── */
+
+@layer components {
+  .glass {
+    position: relative;
+    background:
+      linear-gradient(160deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.015) 42%, rgba(255, 255, 255, 0.045) 100%),
+      var(--glass-tint);
+    border: 1px solid var(--glass-edge);
+    box-shadow:
+      var(--glass-shadow),
+      inset 0 1px 0 var(--glass-spec),
+      inset 0 -14px 30px -18px rgba(255, 255, 255, 0.22);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    backdrop-filter: blur(16px) saturate(1.4);
+  }
+
+  .glass-strong {
+    background:
+      linear-gradient(160deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 40%, rgba(255, 255, 255, 0.05) 100%),
+      var(--glass-tint-strong);
+    border-color: var(--glass-edge-strong);
+    box-shadow:
+      var(--glass-shadow-lg),
+      inset 0 1px 0 var(--glass-spec),
+      inset 0 -16px 34px -20px rgba(255, 255, 255, 0.26);
+  }
+
+  .glass-soft {
+    background: var(--glass-tint-soft);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  }
+
+  /* 棱镜色散边：液态玻璃边缘那一圈彩色薄膜 */
+  .glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      130deg,
+      rgba(120, 220, 255, 0.5),
+      rgba(255, 255, 255, 0.08) 26%,
+      rgba(255, 190, 255, 0.34) 52%,
+      rgba(255, 255, 255, 0.06) 74%,
+      rgba(160, 255, 210, 0.4)
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0.55;
+  }
+
+  /* 顶部高光扫过：用 transform 走合成层，避免每帧重绘导致 backdrop-filter 重算 */
+  .glass::after {
+    content: '';
+    position: absolute;
+    top: -20%;
+    bottom: -20%;
+    left: -70%;
+    width: 55%;
+    border-radius: inherit;
+    background: linear-gradient(
+      100deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.16) 50%,
+      transparent 100%
+    );
+    transform: skewX(-14deg);
+    animation: glass-sheen 11s var(--ease-out-expo) infinite;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  @keyframes glass-sheen {
+    0%,
+    72%,
+    100% {
+      transform: translateX(0) skewX(-14deg);
+      opacity: 0;
+    }
+    80% {
+      opacity: 0.85;
+    }
+    100% {
+      transform: translateX(420%) skewX(-14deg);
+      opacity: 0;
+    }
+  }
+
+  /* ── 胶囊 ── */
+
+  .capsule {
+    border-radius: 999px;
+  }
+
+  .capsule-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    border-radius: 999px;
+    transition:
+      transform 0.28s var(--ease-spring),
+      background-color 0.22s ease,
+      border-color 0.22s ease,
+      box-shadow 0.22s ease,
+      color 0.22s ease;
+  }
+
+  .capsule-btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .capsule-btn:active {
+    transform: translateY(0) scale(0.96);
+  }
+
+  /* ── 从触发按钮生长出来的展开动画 ── */
+
+  /* 注意：不要用 fill-mode: both。
+     浏览器繁忙时动画可能长时间处于 pending，both 会把元素钉在 0% 关键帧上
+     （scale(.22) / opacity:0），面板就永远「长不出来」。
+     基态即展开态，动画只是入场过渡。 */
+  .pop-in {
+    animation: glass-pop 0.46s var(--ease-liquid);
+    will-change: transform, opacity;
+  }
+
+  .pop-out {
+    animation: glass-collapse 0.3s var(--ease-out-expo) both;
+    will-change: transform, opacity;
+  }
+
+  @keyframes glass-pop {
+    0% {
+      opacity: 0;
+      transform: scale(0.22) translate3d(0, 0, 0);
+      filter: blur(10px);
+    }
+    55% {
+      opacity: 1;
+      filter: blur(0);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translate3d(0, 0, 0);
+      filter: blur(0);
+    }
+  }
+
+  @keyframes glass-collapse {
+    0% {
+      opacity: 1;
+      transform: scale(1);
+      filter: blur(0);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(0.26);
+      filter: blur(8px);
+    }
+  }
+
+  /* 侧栏从右侧滑入：带液态回弹 */
+  .slide-in-right {
+    animation: slide-in-right 0.44s var(--ease-liquid) both;
+  }
+
+  @keyframes slide-in-right {
+    0% {
+      opacity: 0;
+      transform: translate3d(34px, 0, 0) scale(0.97);
+      filter: blur(8px);
+    }
+    100% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+      filter: blur(0);
+    }
+  }
+
+  /* ── 文本 ── */
+
+  .label-xs {
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', SFMono-Regular, Menlo, monospace;
+  }
+
+  .num {
+    font-family: 'JetBrains Mono', SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── 滑块：胶囊轨道 ── */
+
+  .slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 22px;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .slider::-webkit-slider-runnable-track {
+    height: 5px;
+    border-radius: 999px;
+    background: linear-gradient(
+      90deg,
+      var(--track-c, var(--c-symb)) 0%,
+      var(--track-c, var(--c-symb)) var(--pct, 50%),
+      rgba(255, 255, 255, 0.12) var(--pct, 50%),
+      rgba(255, 255, 255, 0.12) 100%
+    );
+  }
+
+  .slider::-moz-range-track {
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .slider::-moz-range-progress {
+    height: 5px;
+    border-radius: 999px;
+    background: var(--track-c, var(--c-symb));
+  }
+
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    margin-top: -4.5px;
+    border-radius: 999px;
+    background: radial-gradient(circle at 34% 30%, #ffffff, #d7e6df 62%, #9fb4ad);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.55),
+      0 0 12px -2px var(--track-c, var(--c-symb));
+    transition: transform 0.18s var(--ease-spring);
+  }
+
+  .slider::-webkit-slider-thumb:hover {
+    transform: scale(1.22);
+  }
+
+  .slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    background: radial-gradient(circle at 34% 30%, #ffffff, #d7e6df 62%, #9fb4ad);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+  }
+
+  /* ── 滚动条 ── */
+
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  }
+
+  .scroll-thin::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+  }
+
+  .scroll-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.34);
+  }
+
+  .scroll-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* ───────── 提示气泡 ───────── */
+
+.tooltip-bubble {
+  animation: bubble-in 0.26s var(--ease-spring) both;
+}
+
+@keyframes bubble-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateX(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+  }
+}
+
+/* ───────── 数值跳动 ───────── */
+
+.flash-once {
+  animation: flash-once 0.55s ease;
+}
+
+@keyframes flash-once {
+  0% {
+    text-shadow: 0 0 0 transparent;
+  }
+  30% {
+    text-shadow: 0 0 14px currentColor;
+  }
+  100% {
+    text-shadow: 0 0 0 transparent;
+  }
+}
+
+/* 事件播报进入 */
+.event-in {
+  animation: event-in 0.42s var(--ease-out-expo) both;
+}
+
+@keyframes event-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 减少动效偏好 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
