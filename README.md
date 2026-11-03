@@ -70,6 +70,10 @@ services:
 免费版额度：5 GB/月 出站带宽 + 500 分钟/月 构建时长，**免信用卡**，
 静态站点走 CDN 边缘分发，**没有冷启动**（不会像免费 Web Service 那样休眠）。
 
+> **关于 git 推送**：本项目的沙箱环境里 `git push` 走 HTTPS 会遇到 gnutls 握手失败，
+> 所以仓库是通过 GitHub REST API（`tools/push_to_github.py`）同步的 —— 内容完全一致，
+> 但本地的 commit SHA 与远端不同。你在自己的机器上 `git clone` 后正常开发即可。
+
 ---
 
 ## 三、目录结构
