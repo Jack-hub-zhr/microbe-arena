@@ -31,7 +31,48 @@ npm run preview    # 预览生产构建
 
 ---
 
-## 二、目录结构
+## 二、部署
+
+项目是纯静态产物（Vite 构建 → `dist/`），任何静态托管都能直接跑。
+
+### 已上线：GitHub Pages
+
+**https://jack-hub-zhr.github.io/microbe-arena/**
+
+- 仓库：https://github.com/Jack-hub-zhr/microbe-arena （public）
+- 方案：`gh-pages` 分支存构建产物，Pages 指向该分支
+- 重新发布：`npm run build && python3 tools/deploy_pages.py . <owner>/<repo> gh-pages`
+
+### Render 免费版（Static Site）
+
+仓库根目录已放好 `render.yaml`，Render 会直接读它建站：
+
+```yaml
+services:
+  - type: web
+    name: microbe-arena
+    repo: https://github.com/Jack-hub-zhr/microbe-arena
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    branch: main
+    region: singapore
+    autoDeploy: true
+```
+
+**一键部署（推荐）**：
+打开 https://dashboard.render.com/blueprint/new?repo=https://github.com/Jack-hub-zhr/microbe-arena
+→ 用 GitHub 帐号登录并授权 Render GitHub App（只勾选 `microbe-arena` 这一个仓库）
+→ 点 **Apply**。Render 会读 `render.yaml` 自动建站并触发首次构建。
+
+之后每次 `push` 到 `main` 都会自动重新构建发布。
+
+免费版额度：5 GB/月 出站带宽 + 500 分钟/月 构建时长，**免信用卡**，
+静态站点走 CDN 边缘分发，**没有冷启动**（不会像免费 Web Service 那样休眠）。
+
+---
+
+## 三、目录结构
 
 ```
 src/
@@ -58,7 +99,7 @@ src/
 
 ---
 
-## 三、需求对照表
+## 四、需求对照表
 
 | # | 你的要求 | 本次实现 | 位置 |
 | --- | --- | --- | --- |
@@ -75,7 +116,7 @@ src/
 
 ---
 
-## 四、真实世界演化引擎
+## 五、真实世界演化引擎
 
 这一章是本次新增的核心：**沙盒里出现的每一项「创新」，都是地球上真实发生过的演化事件**，
 并且都带着真实的代表生物、真实的起源年代与真实的演化支系。
@@ -148,9 +189,9 @@ src/
 
 ---
 
-## 五、引擎改动详解
+## 六、引擎改动详解
 
-### 5.1 食物不会溢出培养皿
+### 7.1 食物不会溢出培养皿
 
 ```ts
 clampToDish(x, y, margin = 12) {
@@ -168,7 +209,7 @@ clampToDish(x, y, margin = 12) {
 > 实测：连续三次贴着皿沿投喂后，食物最远距离 866.0 < 皿内半径 884.0，溢出数 0；
 > 5000 tick 演化全程的溢出检查同样为 0。
 
-### 5.2 食同族（cannibalism）
+### 7.2 食同族（cannibalism）
 
 ```ts
 preyScore(predator, prey) {
@@ -187,7 +228,7 @@ preyScore(predator, prey) {
 猎手在找不到常规猎物时会主动逼近同类（饥饿度越高追得越凶），于是「食同族」成为真实存在的生态行为，
 而不是一个摆设开关。事件流里有独立条目：`食同族：猎手 #777 吞噬了同族 #1054`。
 
-### 5.3 多细胞体的功能分化
+### 7.3 多细胞体的功能分化
 
 多细胞体不再只是「黏在一起的几个点」：
 
@@ -210,7 +251,7 @@ preyScore(predator, prey) {
 
 > 实测：多细胞体稳定形成并完成分化，职能分布为核心细胞 / 采集工 / 守卫细胞 / 繁殖体 / 养护细胞 同时存在。
 
-### 5.4 分解者与养分循环
+### 7.4 分解者与养分循环
 
 新增 `溶酶体（lysosome）` 细胞器：
 
@@ -222,14 +263,14 @@ preyScore(predator, prey) {
 > 是用 5 组随机种子跑 5000 tick 扫出来的平衡点（种群稳定在 300~380 之间）。
 - 其他生物吃碎屑只有 ×0.45 收益，碎屑主要归分解者。
 
-### 5.5 性能
+### 7.5 性能
 
 - 邻域查询从 O(n·m) 换成均匀网格空间索引（`SpatialGrid` / `FoodGrid`），
   200~550 个体 × 数百份食物的每帧开销降到近似 O(n)。
 - 进食阶段改为「打标记 → 统一清理」，避免在遍历中 splice 破坏索引。
 - 繁殖阈值、代谢、攻防等数值全部按职能系数派生，便于继续调平衡。
 
-### 5.6 生态平衡
+### 6.6 生态平衡
 
 开局由**三条创始谱系**接种 200 个单细胞（同谱系色相相近，因此可以聚合成多细胞体，
 不同谱系颜色可辨，一眼能看出谁和谁是一家人）。
@@ -248,9 +289,9 @@ preyScore(predator, prey) {
 
 ---
 
-## 六、界面改动详解
+## 七、界面改动详解
 
-### 6.1 Liquid Glass 材质
+### 7.1 Liquid Glass 材质
 
 `src/lib/liquid-glass.ts` 的工作方式：
 
@@ -265,7 +306,7 @@ preyScore(predator, prey) {
 CSS 层面（`index.css`）提供材质外观：半透明渐变、1px 玻璃描边、内侧高光、
 底部反光、**棱镜色散边**（`mask-composite` 抠出的渐变描边）、以及走合成层的高光扫光。
 
-### 6.2 从按钮生长出来的展开动画
+### 7.2 从按钮生长出来的展开动画
 
 ```ts
 // 展开原��� = 用户刚刚点击的那个按钮的中心
@@ -280,19 +321,19 @@ setStyle({ transformOrigin: `${originX}px ${originY}px` });
 
 > 实测：抽屉 `transform-origin` 还原出来的坐标与被点击按钮中心误差 < 3px。
 
-### 6.3 动画不会「卡在半路」
+### 7.3 动画不会「卡在半路」
 
 浏览器繁忙时 CSS 动画可能长时间停在 pending 状态，元素会被钉在关键帧起点
 （`scale(.22)` / `opacity:0`）而永远长不出来。`usePopReveal()` 在动画启动 320ms 后检查一次，
 若动画确实没有推进，就摘掉动画类让面板直接呈现展开态 —— **面板永远可见**。
 
-### 6.4 实时圆饼图
+### 7.4 实时圆饼图
 
 `EcologyPie` 用 SVG `stroke-dasharray` + `stroke-dashoffset` 画圆环分段，
 比例变化时由 CSS 过渡平滑补间（640ms），因此是真正「实时跳动」而不是每帧重绘。
 收起状态下它就嵌在右侧那颗胶囊按钮里（58px），展开后是抽屉里的大圆环（148px）+ 占比条 + 数量。
 
-### 6.5 三维场景
+### 7.5 三维场景
 
 | 对象 | 做法 |
 | --- | --- |
@@ -309,7 +350,7 @@ setStyle({ transformOrigin: `${originX}px ${originY}px` });
 
 ---
 
-## 七、性能与自适应画质
+## 八、性能与自适应画质
 
 三维场景在弱设备（尤其是软件渲染）上是主要瓶颈。因此内置了自动降档：
 
@@ -327,7 +368,7 @@ setStyle({ transformOrigin: `${originX}px ${originY}px` });
 
 ---
 
-## 八、相对原版的行为差异
+## 九、相对原版的行为差异
 
 | 项目 | 原版 | 本版 |
 | --- | --- | --- |
@@ -344,7 +385,7 @@ setStyle({ transformOrigin: `${originX}px ${originY}px` });
 
 ---
 
-## 九、许可
+## 十、许可
 
 - 本项目自身代码可自由使用。
 - `src/lib/liquid-glass.ts` 的 Liquid Glass 实现思路参考了开源社区方案
