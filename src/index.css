@@ -1,43 +1,69 @@
+@import './assets/fonts.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ══════════════════════════════════════════════════════════════
-   Liquid Glass 设计语言
-   材质 = 半透明玻璃 + 背景模糊 + 高光描边 + 折射（运行时注入）
+   设计方向：显微下的实验记录
+   ---------------------------------------------------------------
+   刻意选型，不吃自动化的默认值：
+     · 强调色  黄铜 `#d9a441`（仪器刻度盘）—— 不在靛蓝/紫罗兰带
+     · 中性色  暖石墨 ramp（纸与工作台的暖调），不是库存 slate
+     · 字体    IBM Plex Serif（标题）/ Sans（界面）/ Mono（数据），
+               同一工程感超级家族，三个声部，不是 Inter/Geist
+     · 深度    表面层级 + 发丝线，零霓虹辉光
+     · 圆角    4 / 8 / 14 / 20 的真实刻度，胶囊只留给用户点名要的控件
    ══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* 底层色板 */
-  --ink-0: #04070a;
-  --ink-1: #071016;
-  --ink-2: #0c1a1d;
+  /* 暖石墨中性 ramp */
+  --ink-0: #100f0d; /* 页面底 */
+  --ink-1: #171512; /* 面板 */
+  --ink-2: #1e1b17; /* 抬升面 */
+  --ink-3: #2a2620; /* 强边 / 激活行 */
+  --hair: rgba(239, 233, 222, 0.1); /* 发丝线 */
 
-  /* 语义色 */
-  --c-photo: #a2db3c;
-  --c-decomp: #c084fc;
-  --c-symb: #2cc9ff;
-  --c-hunter: #ff8b3d;
-  --c-gather: #e8c46a;
-  --c-role-core: #ff6bd6;
-  --c-role-worker: #a2db3c;
-  --c-role-guard: #ff8b3d;
-  --c-role-brooder: #2cc9ff;
-  --c-role-nurse: #e8c46a;
+  /* 文字三档 */
+  --text-1: #efe9de;
+  --text-2: #aaa398;
+  --text-3: #857f74;
 
-  /* 玻璃材质 */
-  --glass-tint: rgba(9, 24, 26, 0.42);
-  --glass-tint-strong: rgba(6, 18, 20, 0.62);
-  --glass-tint-soft: rgba(16, 34, 34, 0.26);
-  --glass-edge: rgba(255, 255, 255, 0.14);
-  --glass-edge-strong: rgba(255, 255, 255, 0.26);
-  --glass-spec: rgba(255, 255, 255, 0.55);
-  --glass-shadow: 0 18px 48px -12px rgba(0, 0, 0, 0.62), 0 2px 10px rgba(0, 0, 0, 0.35);
-  --glass-shadow-lg: 0 34px 90px -18px rgba(0, 0, 0, 0.78), 0 4px 18px rgba(0, 0, 0, 0.4);
+  /* 唯一强调色：黄铜 */
+  --accent: #d9a441;
+  --accent-ink: #1a1508; /* 强调色上的文字 */
+  --accent-wash: rgba(217, 164, 65, 0.12);
 
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease-liquid: cubic-bezier(0.22, 1.2, 0.36, 1);
+  /* 生态位数据色 —— 全部避开靛蓝/紫罗兰带 */
+  --c-photo: #84b96b; /* 叶绿素绿 */
+  --c-chemo: #b5652e; /* 硫锈 */
+  --c-decomp: #d4748e; /* 伊红玫 */
+  --c-symb: #4fb3c4; /* 甲苯胺蓝 */
+  --c-hunter: #e2663f; /* 番红橙 */
+  --c-gather: #d6c48f; /* 砂 */
+
+  /* 职能色 */
+  --r-core: #c9a227;
+  --r-worker: #84b96b;
+  --r-guard: #e2663f;
+  --r-brooder: #4fb3c4;
+  --r-nurse: #d6c48f;
+
+  /* 圆角刻度 */
+  --r-xs: 4px; /* 键帽、标签 */
+  --r-sm: 8px; /* 行、输入框、按钮 */
+  --r-md: 14px; /* 卡片 */
+  --r-lg: 20px; /* 面板 */
+  --r-pill: 999px; /* 仅限胶囊控件 */
+
+  /* 阴影：中性，靠表面层级与发丝线，不发光 */
+  --lift-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --lift-md: 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+  --lift-lg: 0 24px 56px -24px rgba(0, 0, 0, 0.85);
+  --top-edge: inset 0 1px 0 rgba(239, 233, 222, 0.07);
+
+  /* 唯一一条缓动曲线 */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 * {
@@ -53,167 +79,91 @@ body,
 body {
   margin: 0;
   background: var(--ink-0);
-  color: #dbe8e2;
-  font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  color: var(--text-1);
+  font-family: 'IBM Plex Sans', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
   overflow: hidden;
   overscroll-behavior: none;
 }
 
-/* ───────── 动态背景：给玻璃提供可折射的内容 ───────── */
+/* ───────── 背景：静态的工作台，而不是漂浮的星云 ───────── */
 
-.aurora {
+.bench {
   position: fixed;
-  inset: -25%;
+  inset: 0;
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(38% 32% at 22% 28%, rgba(44, 201, 255, 0.24), transparent 70%),
-    radial-gradient(34% 30% at 78% 22%, rgba(162, 219, 60, 0.18), transparent 72%),
-    radial-gradient(42% 36% at 68% 78%, rgba(192, 132, 252, 0.2), transparent 74%),
-    radial-gradient(30% 26% at 18% 82%, rgba(255, 139, 61, 0.14), transparent 70%);
-  filter: blur(28px) saturate(1.25);
-  animation: aurora-drift 34s var(--ease-out-expo) infinite alternate;
+    radial-gradient(120% 90% at 50% 118%, rgba(217, 164, 65, 0.09), transparent 58%),
+    radial-gradient(90% 70% at 50% -18%, rgba(79, 179, 196, 0.06), transparent 60%),
+    linear-gradient(180deg, #0c0b0a 0%, #100f0d 46%, #14120e 100%);
 }
 
-.aurora::after {
+/* 测量网格：给玻璃一点可折射的东西，同时读起来像实验记录纸 */
+.bench::after {
   content: '';
   position: absolute;
   inset: 0;
   background-image:
-    radial-gradient(circle at 30% 40%, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px),
-    radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px);
-  background-size: 140px 140px, 200px 200px;
-  animation: aurora-drift 24s var(--ease-out-expo) infinite alternate-reverse;
+    linear-gradient(rgba(239, 233, 222, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(239, 233, 222, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(120% 90% at 50% 50%, #000 35%, transparent 78%);
 }
 
-@keyframes aurora-drift {
-  0% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(3%, -4%, 0) scale(1.08);
-  }
-  100% {
-    transform: translate3d(-3%, 3%, 0) scale(1.04);
-  }
-}
-
-/* ───────── 玻璃材质基类 ───────── */
+/* ───────── 玻璃材质 ─────────
+   保留 Liquid Glass（这是明确提出的设计语言，属于既定决策），
+   但去掉装饰：没有彩虹折射边、没有循环扫光、没有霓虹外发光。 */
 
 @layer components {
   .glass {
     position: relative;
-    background:
-      linear-gradient(160deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.015) 42%, rgba(255, 255, 255, 0.045) 100%),
-      var(--glass-tint);
-    border: 1px solid var(--glass-edge);
-    box-shadow:
-      var(--glass-shadow),
-      inset 0 1px 0 var(--glass-spec),
-      inset 0 -14px 30px -18px rgba(255, 255, 255, 0.22);
-    -webkit-backdrop-filter: blur(16px) saturate(1.4);
-    backdrop-filter: blur(16px) saturate(1.4);
+    background: rgba(26, 23, 19, 0.7);
+    border: 1px solid rgba(239, 233, 222, 0.13);
+    box-shadow: var(--lift-md), var(--top-edge);
+    -webkit-backdrop-filter: blur(18px) saturate(1.12);
+    backdrop-filter: blur(18px) saturate(1.12);
   }
 
   .glass-strong {
-    background:
-      linear-gradient(160deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 40%, rgba(255, 255, 255, 0.05) 100%),
-      var(--glass-tint-strong);
-    border-color: var(--glass-edge-strong);
-    box-shadow:
-      var(--glass-shadow-lg),
-      inset 0 1px 0 var(--glass-spec),
-      inset 0 -16px 34px -20px rgba(255, 255, 255, 0.26);
+    background: rgba(22, 20, 16, 0.9);
+    border-color: rgba(239, 233, 222, 0.16);
+    box-shadow: var(--lift-lg), var(--top-edge);
   }
 
   .glass-soft {
-    background: var(--glass-tint-soft);
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    background: rgba(30, 27, 23, 0.5);
+    border: 1px solid rgba(239, 233, 222, 0.07);
+    box-shadow: var(--top-edge);
   }
 
-  /* 棱镜色散边：液态玻璃边缘那一圈彩色薄膜 */
+  /* 顶部一道极窄的高光，给出厚度感而不是发光 */
   .glass::before {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(
-      130deg,
-      rgba(120, 220, 255, 0.5),
-      rgba(255, 255, 255, 0.08) 26%,
-      rgba(255, 190, 255, 0.34) 52%,
-      rgba(255, 255, 255, 0.06) 74%,
-      rgba(160, 255, 210, 0.4)
-    );
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    mask-composite: exclude;
+    border-top: 1px solid rgba(239, 233, 222, 0.13);
     pointer-events: none;
-    opacity: 0.55;
   }
 
-  /* 顶部高光扫过：用 transform 走合成层，避免每帧重绘导致 backdrop-filter 重算 */
-  .glass::after {
-    content: '';
-    position: absolute;
-    top: -20%;
-    bottom: -20%;
-    left: -70%;
-    width: 55%;
-    border-radius: inherit;
-    background: linear-gradient(
-      100deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.16) 50%,
-      transparent 100%
-    );
-    transform: skewX(-14deg);
-    animation: glass-sheen 11s var(--ease-out-expo) infinite;
-    pointer-events: none;
-    opacity: 0;
-  }
-
-  @keyframes glass-sheen {
-    0%,
-    72%,
-    100% {
-      transform: translateX(0) skewX(-14deg);
-      opacity: 0;
-    }
-    80% {
-      opacity: 0.85;
-    }
-    100% {
-      transform: translateX(420%) skewX(-14deg);
-      opacity: 0;
-    }
-  }
-
-  /* ── 胶囊 ── */
-
+  /* ── 胶囊：只用在用户点名要的控件上 ── */
   .capsule {
-    border-radius: 999px;
+    border-radius: var(--r-pill);
   }
 
   .capsule-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.45rem;
-    border-radius: 999px;
+    gap: 0.4rem;
+    border-radius: var(--r-pill);
     transition:
-      transform 0.28s var(--ease-spring),
-      background-color 0.22s ease,
-      border-color 0.22s ease,
-      box-shadow 0.22s ease,
-      color 0.22s ease;
+      transform 0.16s var(--ease),
+      background-color 0.16s var(--ease),
+      border-color 0.16s var(--ease),
+      color 0.16s var(--ease);
   }
 
   .capsule-btn:hover {
@@ -221,30 +171,25 @@ body {
   }
 
   .capsule-btn:active {
-    transform: translateY(0) scale(0.96);
+    transform: translateY(0) scale(0.98);
   }
 
-  /* ── 从触发按钮生长出来的展开动画 ── */
-
-  /* 注意：不要用 fill-mode: both。
-     浏览器繁忙时动画可能长时间处于 pending，both 会把元素钉在 0% 关键帧上
-     （scale(.22) / opacity:0），面板就永远「长不出来」。
-     基态即展开态，动画只是入场过渡。 */
+  /* ── 从触发按钮生长出来的展开动效 ── */
   .pop-in {
-    animation: glass-pop 0.46s var(--ease-liquid);
+    animation: glass-pop 0.42s var(--ease) both;
     will-change: transform, opacity;
   }
 
   .pop-out {
-    animation: glass-collapse 0.3s var(--ease-out-expo) both;
+    animation: glass-collapse 0.26s var(--ease) both;
     will-change: transform, opacity;
   }
 
   @keyframes glass-pop {
     0% {
       opacity: 0;
-      transform: scale(0.22) translate3d(0, 0, 0);
-      filter: blur(10px);
+      transform: scale(0.24);
+      filter: blur(8px);
     }
     55% {
       opacity: 1;
@@ -252,7 +197,7 @@ body {
     }
     100% {
       opacity: 1;
-      transform: scale(1) translate3d(0, 0, 0);
+      transform: scale(1);
       filter: blur(0);
     }
   }
@@ -266,123 +211,109 @@ body {
     100% {
       opacity: 0;
       transform: scale(0.26);
-      filter: blur(8px);
+      filter: blur(6px);
     }
   }
 
-  /* 侧栏从右侧滑入：带液态回弹 */
-  .slide-in-right {
-    animation: slide-in-right 0.44s var(--ease-liquid) both;
-  }
-
-  @keyframes slide-in-right {
-    0% {
-      opacity: 0;
-      transform: translate3d(34px, 0, 0) scale(0.97);
-      filter: blur(8px);
-    }
-    100% {
-      opacity: 1;
-      transform: translate3d(0, 0, 0) scale(1);
-      filter: blur(0);
-    }
-  }
-
-  /* ── 文本 ── */
-
+  /* ── 文本角色 ──
+     不用全大写 + 宽字距（小标签用等宽 + 常规字距） */
   .label-xs {
-    font-size: 9px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    font-family: 'JetBrains Mono', SFMono-Regular, Menlo, monospace;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 10px;
+    line-height: 1.4;
+    letter-spacing: 0.04em;
+    font-weight: 500;
   }
 
   .num {
-    font-family: 'JetBrains Mono', SFMono-Regular, Menlo, monospace;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
     font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
   }
 
-  /* ── 滑块：胶囊轨道 ── */
+  /* 标题用衬线，制造「记录本」而不是「仪表盘」的味道 */
+  .display {
+    font-family: 'IBM Plex Serif', 'Songti SC', 'SimSun', 'Noto Serif CJK SC', serif;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
 
+  /* ── 滑杆：胶囊轨道 ── */
   .slider {
     -webkit-appearance: none;
     appearance: none;
     width: 100%;
-    height: 22px;
+    height: 20px;
     background: transparent;
     cursor: pointer;
   }
 
   .slider::-webkit-slider-runnable-track {
-    height: 5px;
-    border-radius: 999px;
+    height: 4px;
+    border-radius: var(--r-pill);
     background: linear-gradient(
       90deg,
-      var(--track-c, var(--c-symb)) 0%,
-      var(--track-c, var(--c-symb)) var(--pct, 50%),
-      rgba(255, 255, 255, 0.12) var(--pct, 50%),
-      rgba(255, 255, 255, 0.12) 100%
+      var(--track-c, var(--accent)) 0%,
+      var(--track-c, var(--accent)) var(--pct, 50%),
+      rgba(239, 233, 222, 0.12) var(--pct, 50%),
+      rgba(239, 233, 222, 0.12) 100%
     );
   }
 
   .slider::-moz-range-track {
-    height: 5px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.12);
+    height: 4px;
+    border-radius: var(--r-pill);
+    background: rgba(239, 233, 222, 0.12);
   }
 
   .slider::-moz-range-progress {
-    height: 5px;
-    border-radius: 999px;
-    background: var(--track-c, var(--c-symb));
+    height: 4px;
+    border-radius: var(--r-pill);
+    background: var(--track-c, var(--accent));
   }
 
   .slider::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 14px;
-    height: 14px;
+    width: 13px;
+    height: 13px;
     margin-top: -4.5px;
-    border-radius: 999px;
-    background: radial-gradient(circle at 34% 30%, #ffffff, #d7e6df 62%, #9fb4ad);
-    border: 1px solid rgba(255, 255, 255, 0.65);
-    box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.55),
-      0 0 12px -2px var(--track-c, var(--c-symb));
-    transition: transform 0.18s var(--ease-spring);
+    border-radius: var(--r-pill);
+    background: var(--text-1);
+    border: 1px solid rgba(0, 0, 0, 0.4);
+    box-shadow: var(--lift-sm);
+    transition: transform 0.14s var(--ease);
   }
 
   .slider::-webkit-slider-thumb:hover {
-    transform: scale(1.22);
+    transform: scale(1.15);
   }
 
   .slider::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
-    border-radius: 999px;
-    background: radial-gradient(circle at 34% 30%, #ffffff, #d7e6df 62%, #9fb4ad);
-    border: 1px solid rgba(255, 255, 255, 0.65);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+    width: 13px;
+    height: 13px;
+    border-radius: var(--r-pill);
+    background: var(--text-1);
+    border: 1px solid rgba(0, 0, 0, 0.4);
   }
 
   /* ── 滚动条 ── */
-
   .scroll-thin {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+    scrollbar-color: rgba(239, 233, 222, 0.18) transparent;
   }
 
   .scroll-thin::-webkit-scrollbar {
-    width: 7px;
-    height: 7px;
+    width: 6px;
+    height: 6px;
   }
 
   .scroll-thin::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 999px;
+    background: rgba(239, 233, 222, 0.16);
+    border-radius: var(--r-pill);
   }
 
   .scroll-thin::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.34);
+    background: rgba(239, 233, 222, 0.28);
   }
 
   .scroll-thin::-webkit-scrollbar-track {
@@ -393,47 +324,44 @@ body {
 /* ───────── 提示气泡 ───────── */
 
 .tooltip-bubble {
-  animation: bubble-in 0.26s var(--ease-spring) both;
+  animation: bubble-in 0.2s var(--ease) both;
 }
 
 @keyframes bubble-in {
   0% {
     opacity: 0;
-    transform: scale(0.8) translateX(-4px);
+    transform: scale(0.94);
   }
   100% {
     opacity: 1;
-    transform: scale(1) translateX(0);
+    transform: scale(1);
   }
 }
 
-/* ───────── 数值跳动 ───────── */
+/* ───────── 数值跳动：只在真的有变化时闪一下 ───────── */
 
 .flash-once {
-  animation: flash-once 0.55s ease;
+  animation: flash-once 0.5s ease;
 }
 
 @keyframes flash-once {
   0% {
-    text-shadow: 0 0 0 transparent;
-  }
-  30% {
-    text-shadow: 0 0 14px currentColor;
+    color: var(--accent);
   }
   100% {
-    text-shadow: 0 0 0 transparent;
+    color: inherit;
   }
 }
 
 /* 事件播报进入 */
 .event-in {
-  animation: event-in 0.42s var(--ease-out-expo) both;
+  animation: event-in 0.34s var(--ease) both;
 }
 
 @keyframes event-in {
   0% {
     opacity: 0;
-    transform: translateX(-10px);
+    transform: translateX(-8px);
   }
   100% {
     opacity: 1;
@@ -441,7 +369,7 @@ body {
   }
 }
 
-/* 减少动效偏好 */
+/* 减少动效偏好：全部装饰性动效停掉 */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -36,7 +36,7 @@ export const TOOLS: ToolDef[] = [
     labelEn: 'Inspect',
     hint: '点击任意生物，查看它的基因组',
     hintEn: 'Click any organism to view its genome',
-    color: '#2cc9ff',
+    color: '#4fb3c4',
     icon: <IconEye size={15} />,
   },
   {
@@ -45,7 +45,7 @@ export const TOOLS: ToolDef[] = [
     labelEn: 'Feed',
     hint: '点击培养皿，在该处撒下食物',
     hintEn: 'Click the dish to scatter food there',
-    color: '#a2db3c',
+    color: '#84b96b',
     icon: <IconFeed size={15} />,
   },
   {
@@ -54,7 +54,7 @@ export const TOOLS: ToolDef[] = [
     labelEn: 'Smite',
     hint: '点击培养皿，毁灭半径内的生命',
     hintEn: 'Click the dish to destroy life in a radius',
-    color: '#ff8b3d',
+    color: '#e2663f',
     icon: <IconSmite size={15} />,
   },
   {
@@ -63,7 +63,7 @@ export const TOOLS: ToolDef[] = [
     labelEn: 'Bless',
     hint: '点击生物附近，强制它突变出新细胞器',
     hintEn: 'Click near a cell to force a new organelle',
-    color: '#c77dff',
+    color: '#c08a9e',
     icon: <IconMutate size={15} />,
   },
   {
@@ -72,7 +72,7 @@ export const TOOLS: ToolDef[] = [
     labelEn: 'Aliens',
     hint: '投放一批携带未知基因的外来物种',
     hintEn: 'Release alien species with unknown genes',
-    color: '#4dd0e1',
+    color: '#5aa89b',
     icon: <IconAlien size={15} />,
     instant: true,
   },
@@ -82,7 +82,7 @@ export const TOOLS: ToolDef[] = [
     labelEn: 'Plague',
     hint: '随机夺走约 40% 的生命',
     hintEn: 'Randomly take ~40% of all life',
-    color: '#ff5b5b',
+    color: '#d2604f',
     icon: <IconPlague size={15} />,
     instant: true,
   },
@@ -119,7 +119,7 @@ export default function GodRail({ tool, onSelect, lang, onActiveRect }: Props) {
         <span
           className={cx(
             'w-1.5 h-1.5 rounded-full transition-all duration-300',
-            open ? 'bg-[#c77dff] rotate-0' : 'bg-white/25 -rotate-90',
+            open ? 'bg-[#c08a9e] rotate-0' : 'bg-white/25 -rotate-90',
           )}
         />
       </button>
@@ -166,7 +166,7 @@ export default function GodRail({ tool, onSelect, lang, onActiveRect }: Props) {
                   ? {
                       color: t.color,
                       background: `linear-gradient(180deg, ${t.color}33, ${t.color}12)`,
-                      boxShadow: `inset 0 0 0 1px ${t.color}55, 0 0 18px -4px ${t.color}`,
+                      boxShadow: `inset 0 0 0 1px ${t.color}66`,
                     }
                   : undefined
               }

@@ -102,12 +102,12 @@ export default function App() {
     if (engine.seenEarthEvents.has('cambrian'))
       return {
         eraLabel: lang === 'zh' ? '寒武纪' : 'CAMBRIAN',
-        eraColor: '#c084fc',
+        eraColor: '#d4748e',
       };
     if (engine.seenEarthEvents.has('snowball'))
       return { eraLabel: lang === 'zh' ? '雪球地球' : 'SNOWBALL', eraColor: '#7dd3fc' };
     if (engine.seenEarthEvents.has('goe'))
-      return { eraLabel: lang === 'zh' ? '大氧化' : 'GOE', eraColor: '#e8c46a' };
+      return { eraLabel: lang === 'zh' ? '大氧化' : 'GOE', eraColor: '#d9a441' };
     return { eraLabel: lang === 'zh' ? '前寒武纪' : 'PRECAMBRIAN', eraColor: '#8fa3a0' };
   }, [engine, engine.seenEarthEvents.size, lang]);
 
@@ -164,8 +164,8 @@ export default function App() {
 
 
   return (
-    <div className="h-screen w-screen overflow-hidden relative bg-[#04070a] text-[#dbe8e2] select-none">
-      <div className="aurora" />
+    <div className="h-screen w-screen overflow-hidden relative bg-[#100f0d] text-[#efe9de] select-none">
+      <div className="bench" />
 
       <Petri3D
         engine={engine}
@@ -174,18 +174,24 @@ export default function App() {
         onSelect={setSelectedId}
       />
 
-      {/* ═══════════ 顶部栏 ═══════════ */}
+      {/* ═══════════ HUD（介绍页期间隐藏） ═══════════ */}
+      <div
+        className={cx(
+          'transition-opacity duration-700',
+          started ? 'opacity-100' : 'opacity-0 [&_*]:pointer-events-none',
+        )}
+      >
       <header className="absolute top-0 left-0 right-0 flex items-start gap-2.5 px-4 pt-3.5 pointer-events-none z-20">
         {/* 品牌 */}
         <div className="pointer-events-auto glass capsule h-11 pl-3 pr-4 flex items-center gap-2.5">
-          <div className="w-6 h-6 rounded-full border border-[#2cc9ff]/50 flex items-center justify-center">
-            <div className="w-2 h-2 rounded-full bg-[#a2db3c] animate-pulse" />
+          <div className="w-6 h-6 rounded-full border border-[#4fb3c4]/50 flex items-center justify-center">
+            <div className="w-2 h-2 rounded-full bg-[#84b96b] animate-pulse" />
           </div>
           <div className="leading-none">
             <h1 className="text-[13px] font-semibold tracking-wide">
               {lang === 'zh' ? '微生物进化大赛' : 'Microbe Evolution Arena'}
             </h1>
-            <span className="label-xs text-[#2cc9ff]/65">PETRI ARENA</span>
+            <span className="label-xs text-[#4fb3c4]/65">PETRI ARENA</span>
           </div>
         </div>
 
@@ -195,27 +201,27 @@ export default function App() {
         <div className="pointer-events-auto glass capsule h-11 px-4 flex items-center gap-4 text-[11px] num text-white/55 max-md:hidden">
           <span>
             {lang === 'zh' ? '世代时刻' : 'Tick'}{' '}
-            <b className="text-[#2cc9ff]">{engine.tick.toLocaleString()}</b>
+            <b className="text-[#4fb3c4]">{engine.tick.toLocaleString()}</b>
           </span>
           <span>
             {lang === 'zh' ? '最高世代' : 'Max Gen'}{' '}
-            <b className="text-[#2cc9ff]">{maxGen}</b>
+            <b className="text-[#4fb3c4]">{maxGen}</b>
           </span>
           <span>
             {lang === 'zh' ? '存活' : 'Alive'}{' '}
-            <b className="text-[#a2db3c]">{alive.length}</b>
+            <b className="text-[#84b96b]">{alive.length}</b>
           </span>
           <span className="flex items-center gap-1.5">
             <span
               className={cx(
                 'w-1.5 h-1.5 rounded-full',
-                running ? 'bg-[#a2db3c] animate-pulse' : 'bg-white/30',
+                running ? 'bg-[#84b96b] animate-pulse' : 'bg-white/30',
               )}
             />
             {running ? `${lang === 'zh' ? '运行中' : 'LIVE'} ×${speed}` : lang === 'zh' ? '已暂停' : 'PAUSED'}
           </span>
           <span
-            className="px-1.5 rounded-full border text-[10px]"
+            className="px-1.5 rounded-[4px] border text-[10px]"
             style={{
               borderColor: `${eraColor}55`,
               color: eraColor,
@@ -248,7 +254,7 @@ export default function App() {
       {/* 工具提示气泡：贴着刚刚点击的那个工具按钮 */}
       {toolHintRect && hintTool && (
         <div
-          className="tooltip-bubble fixed z-30 pointer-events-none glass rounded-2xl px-3 py-1.5 text-[10.5px] text-white/72 max-w-[220px] leading-relaxed"
+          className="tooltip-bubble fixed z-30 pointer-events-none glass rounded-[10px] px-3 py-1.5 text-[10.5px] text-white/72 max-w-[220px] leading-relaxed"
           style={{
             left: toolHintRect.right + 12,
             top: toolHintRect.top + toolHintRect.height / 2,
@@ -287,10 +293,10 @@ export default function App() {
         </button>
 
         {[
-          { tab: 'lineage' as DrawerTab, icon: <IconSpark size={15} />, label: lang === 'zh' ? '演化路线' : 'Lineage', color: '#c084fc' },
-          { tab: 'ranks' as DrawerTab, icon: <IconTrophy size={15} />, label: lang === 'zh' ? '猎杀榜' : 'Ranks', color: '#ff8b3d' },
-          { tab: 'codex' as DrawerTab, icon: <IconBook size={15} />, label: lang === 'zh' ? '图鉴' : 'Codex', color: '#a2db3c' },
-          { tab: 'chronicle' as DrawerTab, icon: <IconScroll size={15} />, label: lang === 'zh' ? '编年史' : 'Log', color: '#e8c46a' },
+          { tab: 'lineage' as DrawerTab, icon: <IconSpark size={15} />, label: lang === 'zh' ? '演化路线' : 'Lineage', color: '#d4748e' },
+          { tab: 'ranks' as DrawerTab, icon: <IconTrophy size={15} />, label: lang === 'zh' ? '猎杀榜' : 'Ranks', color: '#e2663f' },
+          { tab: 'codex' as DrawerTab, icon: <IconBook size={15} />, label: lang === 'zh' ? '图鉴' : 'Codex', color: '#84b96b' },
+          { tab: 'chronicle' as DrawerTab, icon: <IconScroll size={15} />, label: lang === 'zh' ? '编年史' : 'Log', color: '#d9a441' },
         ].map((b) => (
           <button
             key={b.tab}
@@ -312,7 +318,7 @@ export default function App() {
             onClick={() => setRunning((r) => !r)}
             className={cx(
               'capsule-btn w-8 h-8',
-              running ? 'bg-[#ff5b5b]/18 text-[#ff8b8b]' : 'bg-[#a2db3c]/18 text-[#a2db3c]',
+              running ? 'bg-[#d2604f]/18 text-[#ff8b8b]' : 'bg-[#84b96b]/18 text-[#84b96b]',
             )}
             title={running ? (lang === 'zh' ? '暂停' : 'Pause') : lang === 'zh' ? '继续' : 'Resume'}
           >
@@ -329,7 +335,7 @@ export default function App() {
               className={cx(
                 'capsule-btn h-7 px-2.5 text-[11px] num transition-colors',
                 speed === s
-                  ? 'text-[#2cc9ff] bg-[#2cc9ff]/16 shadow-[inset_0_0_0_1px_rgba(44,201,255,.4)]'
+                  ? 'text-[#d9a441] bg-[#d9a441]/14 shadow-[inset_0_0_0_1px_rgba(217,164,65,.45)]'
                   : 'text-white/45 hover:text-white/80',
               )}
             >
@@ -342,7 +348,7 @@ export default function App() {
           <button
             onClick={() => fastForward(2000, true)}
             title={lang === 'zh' ? '快进至下一个进化事件' : 'Skip to next event'}
-            className="capsule-btn h-7 px-2.5 text-[11px] text-[#e8c46a] flex items-center gap-1"
+            className="capsule-btn h-7 px-2.5 text-[11px] text-[#d9a441] flex items-center gap-1"
           >
             <IconForward size={12} />
             <span className="hidden sm:inline">{lang === 'zh' ? '事件' : 'Event'}</span>
@@ -372,7 +378,7 @@ export default function App() {
             <span key={id} className="flex items-center gap-1.5">
               <span
                 className="w-1.5 h-1.5 rounded-full"
-                style={{ background: meta.color, boxShadow: `0 0 6px ${meta.color}` }}
+                style={{ background: meta.color }}
               />
               <span className="num text-white/62">
                 {((composition[id as keyof typeof composition] ?? 0) * 100).toFixed(0)}%
@@ -398,7 +404,7 @@ export default function App() {
             className="w-4 h-4 rounded-full"
             style={{
               background: `radial-gradient(circle at 34% 30%, hsl(${selected.genome.hue},78%,64%), hsl(${selected.genome.hue},70%,30%))`,
-              boxShadow: `0 0 12px -2px hsl(${selected.genome.hue},78%,58%)`,
+              boxShadow: '0 1px 2px rgba(0,0,0,.4)',
             }}
           />
           <span className="num text-[11px] text-white/80">#{selected.id}</span>
@@ -409,6 +415,8 @@ export default function App() {
           <IconChart size={13} className="text-white/35" />
         </button>
       )}
+
+      </div>
 
       {/* 数据抽屉：从被点击的胶囊按钮处展开 */}
       <StatsDrawer

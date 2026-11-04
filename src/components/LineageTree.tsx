@@ -17,6 +17,7 @@ import {
 } from '../engine/lineages';
 import type { Simulation } from '../engine/Simulation';
 import { cx } from './ui/Glass';
+import { TraitIcon } from './TraitIcons';
 
 const BRANCH_ORDER: Branch[] = [
   '细菌',
@@ -61,7 +62,7 @@ export default function LineageTree({
   return (
     <div className="space-y-5 pt-1">
       {/* 进度 */}
-      <div className="glass-soft rounded-2xl px-3.5 py-3">
+      <div className="glass-soft rounded-xl px-3.5 py-3">
         <div className="flex items-baseline justify-between mb-1.5">
           <span className="label-xs text-white/40">
             {lang === 'zh' ? '已发现的演化创新' : 'DISCOVERED INNOVATIONS'}
@@ -76,8 +77,8 @@ export default function LineageTree({
             className="h-full rounded-full transition-[width] duration-700"
             style={{
               width: `${(found / total) * 100}%`,
-              background: 'linear-gradient(90deg,#a2db3c,#2cc9ff)',
-              boxShadow: '0 0 10px #a2db3c99',
+              background: 'var(--accent)',
+              
             }}
           />
         </div>
@@ -102,7 +103,7 @@ export default function LineageTree({
               <button
                 key={id}
                 onClick={() => setRouteSel(active ? null : id)}
-                className="w-full text-left rounded-2xl px-3 py-2.5 transition-all duration-300"
+                className="w-full text-left rounded-xl px-3 py-2.5 transition-all duration-300"
                 style={{
                   background: achieved ? `${r.hue}18` : 'rgba(255,255,255,.03)',
                   border: `1px solid ${achieved ? `${r.hue}55` : 'rgba(255,255,255,.08)'}`,
@@ -111,7 +112,7 @@ export default function LineageTree({
               >
                 <div className="flex items-center gap-2">
                   <span className="text-[15px]" style={{ color: achieved ? r.hue : 'rgba(255,255,255,.3)' }}>
-                    {r.icon}
+                    <TraitIcon id={r.icon} size={15} />
                   </span>
                   <span
                     className={cx('text-[12px]', achieved ? 'text-white/90' : 'text-white/40')}
@@ -120,7 +121,7 @@ export default function LineageTree({
                   </span>
                   <span className="flex-1" />
                   <span
-                    className="text-[9.5px] px-1.5 rounded-full"
+                    className="text-[9.5px] px-1.5 rounded-[4px]"
                     style={{
                       background: achieved ? `${r.hue}25` : 'rgba(255,255,255,.05)',
                       color: achieved ? r.hue : 'rgba(255,255,255,.3)',
@@ -174,7 +175,7 @@ export default function LineageTree({
                 }}
               >
                 <span className="text-[14px] mt-px" style={{ color: hit ? e.hue : 'rgba(255,255,255,.35)' }}>
-                  {e.icon}
+                  <TraitIcon id={e.icon} size={14} />
                 </span>
                 <div className="min-w-0">
                   <div className="flex items-baseline gap-2">
@@ -231,7 +232,7 @@ export default function LineageTree({
                             color: got ? t.hue : 'rgba(255,255,255,.3)',
                           }}
                         >
-                          {got ? t.icon : '?'}
+                          {got ? <TraitIcon id={t.icon} size={13} /> : <span className="text-[11px]">?</span>}
                         </span>
                         <span className={cx('text-[11.5px]', got ? 'text-white/85' : 'text-white/38')}>
                           {lang === 'zh' ? t.zh : t.en}

@@ -18,6 +18,7 @@ import {
   IconTrophy,
 } from './Icons';
 import LineageTree from './LineageTree';
+import { TraitIcon } from './TraitIcons';
 import {
   CELL_ROLES,
   ORGANELLES,
@@ -124,7 +125,7 @@ export default function StatsDrawer({
     <aside
       ref={ref}
       className={cx(
-        'glass glass-strong fixed z-40 flex flex-col overflow-hidden rounded-[30px]',
+        'glass glass-strong fixed z-40 flex flex-col overflow-hidden rounded-[20px]',
         open ? 'pop-in' : 'pop-out',
       )}
       style={style}
@@ -137,7 +138,7 @@ export default function StatsDrawer({
     >
       {/* 顶部：标签页 */}
       <div className="flex items-center gap-1 px-3 pt-3 pb-2 shrink-0">
-        <div className="flex-1 flex items-center gap-0.5 p-1 rounded-full bg-white/[0.045] border border-white/8">
+        <div className="flex-1 flex items-center gap-0.5 p-1 rounded-[8px] bg-white/[0.045] border border-white/8">
           {TABS.map((t) => {
             const active = tab === t.id;
             return (
@@ -152,8 +153,8 @@ export default function StatsDrawer({
                 style={
                   active
                     ? {
-                        background: 'linear-gradient(180deg, rgba(44,201,255,.28), rgba(44,201,255,.12))',
-                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,.45), 0 2px 12px -4px rgba(44,201,255,.8)',
+                        background: 'rgba(217,164,65,.16)',
+                        boxShadow: 'inset 0 0 0 1px rgba(217,164,65,.42)',
                       }
                     : undefined
                 }
@@ -212,7 +213,7 @@ function EcologyTab({ engine, lang }: { engine: Simulation; lang: 'zh' | 'en' })
             <div key={id} className="flex items-center gap-2 text-[11px]">
               <span
                 className="w-2 h-2 rounded-full shrink-0"
-                style={{ background: meta.color, boxShadow: `0 0 8px ${meta.color}` }}
+                style={{ background: meta.color }}
               />
               <span className="text-white/68 w-[68px] shrink-0">
                 {lang === 'zh' ? meta.zh : meta.en}
@@ -223,7 +224,7 @@ function EcologyTab({ engine, lang }: { engine: Simulation; lang: 'zh' | 'en' })
                   style={{
                     width: `${Math.max(0, v * 100)}%`,
                     background: `linear-gradient(90deg, ${meta.color}, ${meta.color}66)`,
-                    boxShadow: `0 0 10px ${meta.color}aa`,
+                    boxShadow: '0 1px 2px rgba(0,0,0,.35)',
                   }}
                 />
               </span>
@@ -243,7 +244,7 @@ function EcologyTab({ engine, lang }: { engine: Simulation; lang: 'zh' | 'en' })
           { k: lang === 'zh' ? '累计捕食' : 'Total kills', v: engine.totalKills, c: '#ff8b3d' },
           { k: lang === 'zh' ? '其中食同族' : 'Cannibalism', v: engine.totalCannibalKills, c: '#ff3d6e' },
           { k: lang === 'zh' ? '累计新生' : 'Births', v: engine.totalBirths, c: '#e8c46a' },
-          { k: lang === 'zh' ? '养分浓度' : 'Nutrient', v: `×${engine.nutrient.toFixed(2)}`, c: '#c084fc' },
+          { k: lang === 'zh' ? '养分浓度' : 'Nutrient', v: `×${engine.nutrient.toFixed(2)}`, c: '#b5652e' },
         ].map((s) => (
           <div key={s.k}>
             <div className="text-[9.5px] text-white/38">{s.k}</div>
@@ -258,7 +259,7 @@ function EcologyTab({ engine, lang }: { engine: Simulation; lang: 'zh' | 'en' })
         <>
           <div className="h-px bg-white/8" />
           <div>
-            <div className="text-[10px] tracking-widest text-white/38 font-mono mb-2">
+            <div className="label-xs text-white/40 mb-2">
               {lang === 'zh' ? '细胞职能分化' : 'CELL SPECIALISATION'}
             </div>
             <div className="space-y-1">
@@ -266,8 +267,8 @@ function EcologyTab({ engine, lang }: { engine: Simulation; lang: 'zh' | 'en' })
                 const meta = CELL_ROLES[role as keyof typeof CELL_ROLES];
                 return (
                   <div key={role} className="flex items-center gap-2 text-[11px]">
-                    <span className="text-[12px] w-4 text-center" style={{ color: meta.color }}>
-                      {meta.icon}
+                    <span className="w-4 flex justify-center" style={{ color: meta.color }}>
+                      <TraitIcon id={meta.icon} size={13} />
                     </span>
                     <span className="text-white/66">
                       {lang === 'zh' ? meta.zh : meta.en}
@@ -298,7 +299,7 @@ function RanksTab({ engine, lang }: { engine: Simulation; lang: 'zh' | 'en' }) {
   return (
     <div className="space-y-5 pt-1">
       <div>
-        <div className="text-[10px] tracking-widest text-white/38 font-mono mb-2">
+        <div className="label-xs text-white/40 mb-2">
           {lang === 'zh' ? '猎杀排行榜' : 'KILL LEADERBOARD'}
         </div>
         <div className="space-y-1">
@@ -316,7 +317,7 @@ function RanksTab({ engine, lang }: { engine: Simulation; lang: 'zh' | 'en' }) {
               </span>
               <span className="flex-1" />
               {a.cannibalKills > 0 && (
-                <span className="text-[9px] px-1.5 rounded-full bg-[#ff3d6e]/18 text-[#ff8fae] border border-[#ff3d6e]/30">
+                <span className="text-[9px] px-1.5 rounded-[4px] bg-[#d2604f]/18 text-[#e79b8c] border border-[#d2604f]/32">
                   {lang === 'zh' ? `食同族 ${a.cannibalKills}` : `cannibal ${a.cannibalKills}`}
                 </span>
               )}
@@ -334,7 +335,7 @@ function RanksTab({ engine, lang }: { engine: Simulation; lang: 'zh' | 'en' }) {
       <div className="h-px bg-white/8" />
 
       <div>
-        <div className="text-[10px] tracking-widest text-white/38 font-mono mb-2">
+        <div className="label-xs text-white/40 mb-2">
           {lang === 'zh' ? '食同族记录' : 'CANNIBALISM'}
         </div>
         <div className="space-y-1">
@@ -366,7 +367,7 @@ function CodexTab({ engine, lang }: { engine: Simulation; lang: 'zh' | 'en' }) {
   const [openId, setOpenId] = useState<OrganelleId | null>(null);
   return (
     <div className="space-y-1 pt-1">
-      <div className="text-[10px] tracking-widest text-white/38 font-mono mb-2">
+      <div className="label-xs text-white/40 mb-2">
         {lang === 'zh' ? '演化创新图鉴' : 'INNOVATION CODEX'} · {engine.seenOrganelles.size}/
         {ORGANELLE_IDS.length}
       </div>
@@ -392,7 +393,7 @@ function CodexTab({ engine, lang }: { engine: Simulation; lang: 'zh' | 'en' }) {
                 background: found ? `${meta.hue}18` : 'transparent',
               }}
             >
-              {found ? meta.icon : '?'}
+              {found ? <TraitIcon id={meta.icon} size={13} /> : <span className="text-[11px]">?</span>}
             </span>
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-2">
@@ -442,9 +443,9 @@ const EVENT_COLOR: Record<string, string> = {
   milestone: '#e8c46a',
   extinction: '#ff5b5b',
   apex: '#ff8b3d',
-  god: '#c77dff',
+  god: '#c08a9e',
   cannibal: '#ff3d6e',
-  differentiate: '#ff6bd6',
+  differentiate: '#c9a227',
   earth: '#e8c46a',
   route: '#34d399',
 };
@@ -452,7 +453,7 @@ const EVENT_COLOR: Record<string, string> = {
 function ChronicleTab({ engine, lang }: { engine: Simulation; lang: 'zh' | 'en' }) {
   return (
     <div className="pt-1">
-      <div className="text-[10px] tracking-widest text-white/38 font-mono mb-2">
+      <div className="label-xs text-white/40 mb-2">
         {lang === 'zh' ? '进化编年史' : 'CHRONICLE'}
       </div>
       <div className="space-y-1.5">
@@ -511,24 +512,24 @@ function CellTab({
           className="w-10 h-10 rounded-full shrink-0"
           style={{
             background: `radial-gradient(circle at 34% 30%, hsl(${agent.genome.hue},78%,64%), hsl(${agent.genome.hue},70%,32%))`,
-            boxShadow: `0 0 22px -4px hsl(${agent.genome.hue},78%,58%)`,
+            boxShadow: '0 1px 2px rgba(0,0,0,.4)',
           }}
         />
         <div className="min-w-0">
           <div className="num text-[15px] text-white/90">#{agent.id}</div>
           <div className="flex items-center gap-1.5 flex-wrap">
             <span
-              className="text-[10px] px-1.5 rounded-full"
+              className="text-[10px] px-1.5 rounded-[4px]"
               style={{ background: `${strategy.color}22`, color: strategy.color }}
             >
               {lang === 'zh' ? strategy.zh : strategy.en}
             </span>
             {role && (
               <span
-                className="text-[10px] px-1.5 rounded-full"
+                className="text-[10px] px-1.5 rounded-[4px]"
                 style={{ background: `${role.color}22`, color: role.color }}
               >
-                {role.icon} {lang === 'zh' ? role.zh : role.en}
+                <TraitIcon id={role.icon} size={11} /> {lang === 'zh' ? role.zh : role.en}
               </span>
             )}
           </div>
@@ -570,7 +571,7 @@ function CellTab({
                 style={{
                   width: `${Math.min(100, (b.v / b.max) * 100)}%`,
                   background: b.c,
-                  boxShadow: `0 0 8px ${b.c}`,
+  
                 }}
               />
             </span>
@@ -588,7 +589,7 @@ function CellTab({
       )}
 
       <div>
-        <div className="text-[9.5px] tracking-widest text-white/34 font-mono mb-1.5">
+        <div className="label-xs text-white/40 mb-1.5">
           {lang === 'zh' ? '细胞器' : 'ORGANELLES'}
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -606,7 +607,7 @@ function CellTab({
                 className="text-[10px] px-2 py-1 rounded-full"
                 style={{ background: `${meta.hue}1c`, color: meta.hue, border: `1px solid ${meta.hue}38` }}
               >
-                {meta.icon} {lang === 'zh' ? meta.zh : meta.en}
+                <TraitIcon id={meta.icon} size={11} /> {lang === 'zh' ? meta.zh : meta.en}
               </span>
             );
           })}

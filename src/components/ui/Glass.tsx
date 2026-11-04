@@ -130,7 +130,7 @@ export function GlassButton({
               color,
               borderColor: `${color}66`,
               background: `linear-gradient(180deg, ${color}33, ${color}12)`,
-              boxShadow: `0 0 0 1px ${color}40, 0 6px 22px -8px ${color}, inset 0 1px 0 rgba(255,255,255,.45)`,
+              boxShadow: `inset 0 0 0 1px ${color}66, inset 0 1px 0 rgba(255,255,255,.14)`,
             }
           : undefined
       }

@@ -80,7 +80,6 @@ export function EcologyPie({
                 strokeDashoffset={s.offset}
                 style={{
                   transition: 'stroke-dasharray 640ms cubic-bezier(.22,1,.36,1), stroke-dashoffset 640ms cubic-bezier(.22,1,.36,1)',
-                  filter: `drop-shadow(0 0 5px ${s.color}88)`,
                 }}
               />
             ),
@@ -107,7 +106,7 @@ export function EcologyPie({
             <div key={s.id} className="flex items-center gap-2 text-[11px]">
               <span
                 className="w-2 h-2 rounded-full shrink-0"
-                style={{ background: s.color, boxShadow: `0 0 8px ${s.color}` }}
+                style={{ background: s.color }}
               />
               <span className="text-white/70">{s.label}</span>
               <span className="flex-1" />

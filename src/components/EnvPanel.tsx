@@ -69,7 +69,7 @@ export default function EnvPanel({ engine, lang, refresh }: Props) {
       <div
         ref={panelRef}
         className={cx(
-          'glass rounded-[22px] overflow-hidden',
+          'glass rounded-[14px] overflow-hidden',
           open ? 'pop-in' : 'pop-out pointer-events-none',
         )}
         style={{
@@ -112,7 +112,7 @@ export default function EnvPanel({ engine, lang, refresh }: Props) {
                   refresh();
                 }}
                 className={cx(
-                  'px-1.5 rounded-full text-[9px] border transition-colors',
+                  'px-1.5 rounded-[4px] text-[9px] border transition-colors',
                   engine.lightOverride === null
                     ? 'border-[#2cc9ff]/45 text-[#2cc9ff]'
                     : 'border-white/15 text-white/40',
