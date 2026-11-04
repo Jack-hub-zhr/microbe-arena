@@ -35,9 +35,13 @@ npm run preview    # 预览生产构建
 
 项目是纯静态产物（Vite 构建 → `dist/`），任何静态托管都能直接跑。
 
-### 已上线：GitHub Pages
+### 已上线（三个入口，任选其一）
 
-**https://jack-hub-zhr.github.io/microbe-arena/**
+| 入口 | 地址 | 说明 |
+| --- | --- | --- |
+| **公网托管** | **https://ovjstdt0dl5fz.space.mcode.cn** | 主入口 |
+| GitHub Pages | https://jack-hub-zhr.github.io/microbe-arena/ | 仓库同源，永久保留 |
+| Render（待授权） | 待生成 `*.onrender.com` | `render.yaml` 已就绪，见下 |
 
 - 仓库：https://github.com/Jack-hub-zhr/microbe-arena （public）
 - 方案：`gh-pages` 分支存构建产物，Pages 指向该分支
