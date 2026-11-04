@@ -9,28 +9,41 @@ import json
 import os
 import subprocess
 import sys
+import time
 import urllib.request
 
 TOKEN = os.environ["GITHUB_TOKEN"]
 API = "https://api.github.com"
 
 
-def req(method, path, payload=None, raw=False):
+def req(method, path, payload=None, raw=False, attempts=5):
+    """带指数退避的请求：GitHub API 偶尔返回 5xx，重试即可恢复"""
     data = json.dumps(payload).encode() if payload is not None else None
-    r = urllib.request.Request(
-        API + path,
-        data=data,
-        method=method,
-        headers={
-            "Authorization": f"token {TOKEN}",
-            "Accept": "application/vnd.github+json",
-            "User-Agent": "mavis-deploy",
-            "Content-Type": "application/json",
-        },
-    )
-    with urllib.request.urlopen(r, timeout=120) as resp:
-        body = resp.read()
-    return body if raw else json.loads(body)
+    last = None
+    for i in range(attempts):
+        r = urllib.request.Request(
+            API + path,
+            data=data,
+            method=method,
+            headers={
+                "Authorization": f"token {TOKEN}",
+                "Accept": "application/vnd.github+json",
+                "User-Agent": "mavis-deploy",
+                "Content-Type": "application/json",
+            },
+        )
+        try:
+            with urllib.request.urlopen(r, timeout=120) as resp:
+                body = resp.read()
+            return body if raw else json.loads(body)
+        except urllib.error.HTTPError as e:
+            last = e
+            if e.code < 500:      # 4xx 是请求本身的问题，重试没有意义
+                raise
+            wait = 2 ** i
+            print(f"  ⚠ {method} {path} → {e.code}，{wait}s 后重试 ({i + 1}/{attempts})")
+            time.sleep(wait)
+    raise last
 
 
 def collect(root):
