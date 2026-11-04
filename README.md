@@ -65,11 +65,42 @@ services:
 ```
 
 **一键部署（推荐）**：
-打开 https://dashboard.render.com/blueprint/new?repo=https://github.com/Jack-hub-zhr/microbe-arena
-→ 用 GitHub 帐号登录并授权 Render GitHub App（只勾选 `microbe-arena` 这一个仓库）
-→ 点 **Apply**。Render 会读 `render.yaml` 自动建站并触发首次构建。
 
-之后每次 `push` 到 `main` 都会自动重新构建发布。
+<div align="center">
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://dashboard.render.com/blueprint/new?repo=https://github.com/Jack-hub-zhr/microbe-arena)
+
+</div>
+
+点上面按钮（或直接打开这行链接）：
+
+```
+https://dashboard.render.com/blueprint/new?repo=https://github.com/Jack-hub-zhr/microbe-arena
+```
+
+Render 会读仓库里的 `render.yaml`，**表单里所有字段都已填好**，你只需要：
+
+1. 用 GitHub 帐号登录（第一次会要求你同意 Render 读取仓库 —— 勾选
+   `microbe-arena` 这一个仓库即可，不要选「全部仓库」）；
+2. 回到 Blueprint 页面点 **Apply**。
+
+之后每次 `push` 到 `main` 都会自动重新构建发布；每个 PR 还会得到独立预览地址。
+
+<details>
+<summary>建站参数（供核对，页面上的值就是这些）</summary>
+
+| 字段 | 值 |
+| --- | --- |
+| 类型 | Static Site（`type: web` + `runtime: static`） |
+| 仓库 | `https://github.com/Jack-hub-zhr/microbe-arena` |
+| 分支 | `main` |
+| 构建命令 | `npm ci && npm run build` |
+| 发布目录 | `./dist` |
+| 区域 | `singapore` |
+| 自动部署 | 开（推送即发布） |
+| PR 预览 | 开 |
+
+</details>
 
 免费版额度：5 GB/月 出站带宽 + 500 分钟/月 构建时长，**免信用卡**，
 静态站点走 CDN 边缘分发，**没有冷启动**（不会像免费 Web Service 那样休眠）。
