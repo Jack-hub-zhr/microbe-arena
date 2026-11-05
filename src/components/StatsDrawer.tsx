@@ -240,7 +240,7 @@ function EcologyTab({ engine, lang }: { engine: Simulation; lang: 'zh' | 'en' })
       <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
         {[
           { k: lang === 'zh' ? '存活生物' : 'Alive', v: engine.agents.filter((a) => a.alive).length, c: '#a2db3c' },
-          { k: lang === 'zh' ? '多细胞群体' : 'Colonies', v: engine.colonies.size, c: '#2cc9ff' },
+          { k: lang === 'zh' ? '多细胞群体' : 'Colonies', v: engine.colonies.size, c: '#4fb3c4' },
           { k: lang === 'zh' ? '累计捕食' : 'Total kills', v: engine.totalKills, c: '#ff8b3d' },
           { k: lang === 'zh' ? '其中食同族' : 'Cannibalism', v: engine.totalCannibalKills, c: '#ff3d6e' },
           { k: lang === 'zh' ? '累计新生' : 'Births', v: engine.totalBirths, c: '#e8c46a' },
@@ -439,7 +439,7 @@ function CodexTab({ engine, lang }: { engine: Simulation; lang: 'zh' | 'en' }) {
 
 const EVENT_COLOR: Record<string, string> = {
   organelle: '#a2db3c',
-  colony: '#2cc9ff',
+  colony: '#4fb3c4',
   milestone: '#e8c46a',
   extinction: '#ff5b5b',
   apex: '#ff8b3d',
@@ -500,7 +500,7 @@ function CellTab({
   const colonySize = engine.colonySize(agent.colonyId);
   const bars: { k: string; v: number; max: number; c: string }[] = [
     { k: lang === 'zh' ? '攻击' : 'Attack', v: engine.attackOf(agent), max: 20, c: '#ff8b3d' },
-    { k: lang === 'zh' ? '防御' : 'Defense', v: engine.defenseOf(agent), max: 20, c: '#2cc9ff' },
+    { k: lang === 'zh' ? '防御' : 'Defense', v: engine.defenseOf(agent), max: 20, c: '#4fb3c4' },
     { k: lang === 'zh' ? '速度' : 'Speed', v: engine.speedOf(agent), max: 4, c: '#a2db3c' },
     { k: lang === 'zh' ? '感知' : 'Sense', v: engine.senseOf(agent), max: 260, c: '#e8c46a' },
   ];
@@ -581,7 +581,7 @@ function CellTab({
       </div>
 
       {colonySize > 0 && (
-        <div className="text-[10.5px] text-[#2cc9ff] bg-[#2cc9ff]/12 px-2.5 py-2 rounded-xl">
+        <div className="text-[10.5px] text-[#4fb3c4] bg-[#4fb3c4]/12 px-2.5 py-2 rounded-xl">
           {lang === 'zh'
             ? `隶属多细胞聚合体 · ${colonySize} 个细胞协同中`
             : `Member of a colony · ${colonySize} cells cooperating`}

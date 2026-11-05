@@ -53,7 +53,9 @@ async function api(method, path, body) {
 (async () => {
   // 1. 工作区
   const owners = await api('GET', '/owners');
-  const list = Array.isArray(owners) ? owners : owners.owner || owners.owners || [];
+  // 响应可能是 [{cursor, owner:{...}}] / {owner:[...]} / [{id,...}]
+  let list = Array.isArray(owners) ? owners : owners.owner || owners.owners || [];
+  if (list.length && list[0] && list[0].owner) list = list.map((x) => x.owner);
   const owner = Array.isArray(list) ? list[0] : list;
   if (!owner?.id) throw new Error('拿不到 ownerId：' + JSON.stringify(owners).slice(0, 300));
   console.log('· 工作区:', owner.name || owner.id, `(${owner.id})`);

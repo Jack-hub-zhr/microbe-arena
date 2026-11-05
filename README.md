@@ -41,7 +41,7 @@ npm run preview    # 预览生产构建
 | --- | --- | --- |
 | **公网托管** | **https://4nmqpzhv0dx6d.space.mcode.cn** | 主入口 |
 | GitHub Pages | https://jack-hub-zhr.github.io/microbe-arena/ | 仓库同源，永久保留 |
-| Render（待授权） | 待生成 `*.onrender.com` | `render.yaml` 已就绪，见下 |
+| **Render** | **https://microbe-arena.onrender.com** | 免费版 Static Site，CDN 边缘分发 |
 
 - 仓库：https://github.com/Jack-hub-zhr/microbe-arena （public）
 - 方案：`gh-pages` 分支存构建产物，Pages 指向该分支

@@ -169,7 +169,7 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
     key.shadow.radius = 3;
     scene.add(key);
 
-    const rim = new THREE.DirectionalLight(0x2cc9ff, 0.75);
+    const rim = new THREE.DirectionalLight(0x93aebc, 0.75);
     rim.position.set(-13, 9, -11);
     scene.add(rim);
 
@@ -661,7 +661,7 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
     /* ───────── 选中光环 ───────── */
     const selectRing = new THREE.Mesh(
       new THREE.TorusGeometry(1, 0.055, 12, 64),
-      new THREE.MeshBasicMaterial({ color: 0x2cc9ff, transparent: true, opacity: 0.95 }),
+      new THREE.MeshBasicMaterial({ color: 0xd9a441, transparent: true, opacity: 0.95 }),
     );
     selectRing.rotation.x = Math.PI / 2;
     selectRing.visible = false;
@@ -1043,7 +1043,7 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
           linkPos[i6 + 4] = 0.16;
           linkPos[i6 + 5] = m.y * S;
           const dominant = dominantRole(members);
-          colorTmp.set(dominant ? CELL_ROLES[dominant].color : '#2cc9ff');
+          colorTmp.set(dominant ? CELL_ROLES[dominant].color : '#4fb3c4');
           linkCol[i6] = colorTmp.r * 0.9;
           linkCol[i6 + 1] = colorTmp.g * 0.9;
           linkCol[i6 + 2] = colorTmp.b * 0.9;
@@ -1056,7 +1056,7 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
         // 群体光晕：让多细胞体看起来是一个整体
         if (glowN < 120) {
           const dominant = dominantRole(members);
-          const roleC = dominant ? CELL_ROLES[dominant].color : '#2cc9ff';
+          const roleC = dominant ? CELL_ROLES[dominant].color : '#4fb3c4';
           colorTmp.set(colony.route ? ROUTE_COLORS[colony.route] : roleC);
           const spread = 0.7 + members.length * 0.12;
           dummy.position.set(cx * S, 0.14, cy * S);

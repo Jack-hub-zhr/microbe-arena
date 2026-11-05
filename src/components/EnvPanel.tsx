@@ -114,7 +114,7 @@ export default function EnvPanel({ engine, lang, refresh }: Props) {
                 className={cx(
                   'px-1.5 rounded-[4px] text-[9px] border transition-colors',
                   engine.lightOverride === null
-                    ? 'border-[#2cc9ff]/45 text-[#2cc9ff]'
+                    ? 'border-[#d9a441]/45 text-[#d9a441]'
                     : 'border-white/15 text-white/40',
                 )}
               >
