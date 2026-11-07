@@ -473,7 +473,7 @@ export default function App() {
         <div
           key={toast.id}
           className="pointer-events-none fixed left-1/2 top-[64px] z-[60] w-[min(440px,calc(100vw-24px))] -translate-x-1/2"
-          style={{ animation: 'bubble-in .28s cubic-bezier(.22,1,.36,1) both' }}
+          style={{ animation: 'toast-in .28s cubic-bezier(.22,1,.36,1) both' }}
         >
           <div
             className="glass glass-strong rounded-[14px] px-3.5 py-2.5"
