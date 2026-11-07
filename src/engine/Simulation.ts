@@ -14,6 +14,7 @@
  *   大氧化事件 / 雪球地球 / 寒武纪爆发
  */
 
+import { GEO_EVENT_MAP } from './geoEvents';
 import type {
   Agent,
   CellRole,
@@ -138,6 +139,13 @@ const ROLE_MODS: Record<
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const dist = (ax: number, ay: number, bx: number, by: number) => Math.hypot(ax - bx, ay - by);
+
+/** 存活个体数（供事件效果按比例取样） */
+function aliveCount(sim: Simulation): number {
+  let n = 0;
+  for (const a of sim.agents) if (a.alive) n++;
+  return n;
+}
 
 /** 均匀网格空间索引：把 O(n·m) 的邻域搜索降到近似 O(n) */
 class SpatialGrid {
@@ -280,9 +288,20 @@ export class Simulation {
   glacial = 0;
   /** 剩余寒武纪爆发 tick（突变率激增） */
   cambrian = 0;
+  /** 已由用户触发的地球史事件 */
+  geoEventsTriggered = new Set<string>();
+  /** 环境改写：由地球史事件施加，带到期 tick */
+  private tempLock: { value: number; until: number } | null = null;
+  private mutationBoost = 1;
+  private mutationBoostUntil = 0;
+  private nutrientMul = 1;
+  private nutrientMulUntil = 0;
+  private sizeScale = 1;
 
   /** 上一次发生「食同族」的 tick，用于渲染提示 */
   lastCannibalTick = -999;
+  /** 上一次播报「食同族」的 tick，避免编年史刷屏 */
+  private lastCannibalLogTick: number | null = null;
   /** 「首个多细胞聚合体」里程碑只播报一次 */
   colonyEventDone = false;
 
@@ -383,13 +402,14 @@ export class Simulation {
 
   spawnFrom(genome: Genome, parent?: Agent, scattered = false): Agent {
     const p = scattered || !parent ? this.randomPos() : { x: parent.x + rand(-14, 14), y: parent.y + rand(-14, 14) };
+    const scaled = { ...genome, size: clamp(genome.size * this.sizeScale, 2.4, 9) };
     const agent: Agent = {
       id: agentSeq++,
       x: p.x,
       y: p.y,
       vx: rand(-1, 1),
       vy: rand(-1, 1),
-      genome,
+      genome: scaled,
       energy: parent ? parent.energy * 0.45 : rand(50, 70),
       age: 0,
       generation: parent ? parent.generation + 1 : 0,
@@ -398,12 +418,14 @@ export class Simulation {
       children: 0,
       colonyId: parent?.colonyId ?? null,
       role: parent?.role ?? null,
-      strategy: deriveStrategy(genome),
+      strategy: deriveStrategy(scaled),
       wander: rand(0, Math.PI * 2),
       alive: true,
       flash: 0,
       lastFeedTick: -999,
       dormant: false,
+      alien: false,
+      digest: 0,
     };
     this.byId.set(agent.id, agent);
     return agent;
@@ -540,7 +562,10 @@ export class Simulation {
         genome.organelles.push(pick);
         this.seenOrganelles.add(pick);
       }
-      this.agents.push(this.spawnFrom(genome, undefined, true));
+      const spawn = this.spawnFrom(genome, undefined, true);
+      spawn.alien = true;
+      spawn.genome.hue = 186; // 固定成青绿，一眼能和三条创始谱系区分开
+      this.agents.push(spawn);
       this.totalBirths++;
     }
     this.effects.push({ type: 'alien', x: 0, y: 0, tick: this.tick });
@@ -584,8 +609,19 @@ export class Simulation {
     return a.role ? ROLE_MODS[a.role] : null;
   }
 
-  /** 有效温度（冰期会强制压低） */
+  /** 当前生效的养分供给倍率（森林 / 人类世等事件会改写它） */
+  get nutrientMultiplier() {
+    return this.tick < this.nutrientMulUntil ? this.nutrientMul : 1;
+  }
+
+  /** 当前生效的突变率倍率 */
+  get mutationMultiplier() {
+    return this.tick < this.mutationBoostUntil ? this.mutationBoost : 1;
+  }
+
+  /** 有效温度：冰期或地球史事件可以强制改写 */
   get effectiveTemperature() {
+    if (this.tempLock && this.tick < this.tempLock.until) return this.tempLock.value;
     return this.glacial > 0 ? this.temperature * 0.3 : this.temperature;
   }
 
@@ -681,7 +717,9 @@ export class Simulation {
 
     // 投放有机养分
     if (this.food.length < 520) {
-      let budget = this.config.foodPerTick * (0.5 + 0.5 * this.nutrient) * (this.glacial > 0 ? 0.45 : 1);
+      const boost = this.tick < this.nutrientMulUntil ? this.nutrientMul : 1;
+      let budget =
+        this.config.foodPerTick * (0.5 + 0.5 * this.nutrient) * boost * (this.glacial > 0 ? 0.45 : 1);
       while (budget > 0) {
         if (Math.random() < budget) this.spawnFood();
         budget -= 1;
@@ -854,8 +892,14 @@ export class Simulation {
       // 光合产能：叶绿体把光变成能量
       if (flags.photosynthesis) a.energy += 0.42 * this.light * mods.energyGain;
 
-      // 化能产能：不依赖光照，靠氧化无机物活着
-      if (flags.chemosynthesis) a.energy += 0.13 * mods.energyGain;
+      // 化能产能：不依赖光照，靠氧化无机物活着 —— 夜里是主力
+      if (flags.chemosynthesis) {
+        a.energy += (0.12 + 0.07 * (1 - this.light)) * mods.energyGain;
+        // 同时拥有光合与化能的细胞随昼夜切换主生态位（只在两者之间切换，不动猎手）
+        if (flags.photosynthesis && a.strategy === 'photosynthesizer') {
+          a.strategy = this.light > 0.42 ? 'photosynthesizer' : 'chemotroph';
+        }
+      }
 
       // 有氧呼吸：只有在氧气充足的年代才有优势
       if (a.genome.organelles.includes('aerobe')) {
@@ -938,9 +982,16 @@ export class Simulation {
     if (this.food.some((f) => f.dead)) this.food = this.food.filter((f) => !f.dead);
 
     /* ── 3. 捕食（含食同族与触手远攻） ── */
+    // 猎物稀少时捕食更容易失败 —— 洛特卡-沃尔泰拉式的自然调节，
+    // 避免种群顶到上限后无限churn（捕食数无界增长）
+    let preyCount = 0;
+    for (const a of alive) if (a.strategy !== 'hunter') preyCount++;
+    const scarcity = clamp(1 - preyCount / Math.max(8, alive.length * 0.18), 0, 0.85);
+
     const killed = new Set<number>();
     for (const a of alive) {
       if (!a.alive || killed.has(a.id)) continue;
+      if (a.digest > 0) continue; // 还在消化，捕食失败
       const reach = this.attackRangeOf(a);
       for (const b of this.agentGrid.near(a.x, a.y)) {
         if (!b.alive || killed.has(b.id) || b.id === a.id) continue;
@@ -948,13 +999,19 @@ export class Simulation {
         if (d > a.genome.size + b.genome.size + 3 + reach) continue;
         const score = this.preyScore(a, b);
         if (score > 0) {
-          this.kill(a, b, killed, score < 1);
-          break;
+          if (Math.random() >= scarcity) {
+            this.kill(a, b, killed, score < 1);
+            break;
+          }
+          continue;
         }
         const reverse = this.preyScore(b, a);
         if (reverse > 0) {
-          this.kill(b, a, killed, reverse < 1);
-          break;
+          if (Math.random() >= scarcity) {
+            this.kill(b, a, killed, reverse < 1);
+            break;
+          }
+          continue;
         }
         const nx = (b.x - a.x) / (d + 0.01);
         const ny = (b.y - a.y) / (d + 0.01);
@@ -1228,7 +1285,8 @@ export class Simulation {
   }
 
   private effectiveMutationRate() {
-    return this.config.mutationRate * (this.cambrian > 0 ? 2.5 : 1);
+    const boost = this.tick < this.mutationBoostUntil ? this.mutationBoost : 1;
+    return this.config.mutationRate * boost * (this.cambrian > 0 ? 2.5 : 1);
   }
 
   /* ───────── 多细胞路线 ───────── */
@@ -1331,6 +1389,296 @@ export class Simulation {
     }
   }
 
+  /* ───────── 地球史事件：用户可自行选择并实施 ───────── */
+
+  /**
+   * 施加一个地球史事件。每个事件都会真的改变演化规则或种群，
+   * 而不是只弹一条提示。
+   */
+  applyGeoEvent(id: string, opts: { silent?: boolean } = {}): { ok: boolean; message: string } {
+    const def = GEO_EVENT_MAP[id];
+    if (!def) return { ok: false, message: '未知事件' };
+
+    const before = this.agents.filter((a) => a.alive).length;
+    let message = '';
+
+    switch (id) {
+      case 'bigbang':
+      case 'luca':
+        this.reInoculate();
+        message = `时间归零：重新接种 ${this.config.initialCount} 个原始单细胞`;
+        break;
+
+      case 'hadean':
+        this.tempLock = { value: 0.95, until: this.tick + 600 };
+        message = '地表熔化：600 tick 内代谢与养分消耗同步暴涨';
+        break;
+
+      case 'greatoxidation':
+        message = this.applyGreatOxidation();
+        break;
+
+      case 'eukaryote':
+        for (const a of this.agents) {
+          if (!a.alive) continue;
+          if (!a.genome.organelles.includes('mitochondria') && a.genome.organelles.length < 7) {
+            a.genome.organelles.push('mitochondria');
+            a.strategy = deriveStrategy(a.genome);
+          }
+        }
+        message = '内共生完成：全体获得线粒体，能耗下降 35%';
+        break;
+
+      case 'snowball':
+        message = this.applySnowball();
+        break;
+
+      case 'cambrian':
+        this.mutationBoost = 2.5;
+        this.mutationBoostUntil = this.tick + 320;
+        message = '突变率 ×2.5 持续 320 tick：身体蓝图集中涌现';
+        break;
+
+      case 'ordovician':
+        message = `奥陶纪末冰期：${this.massDeath(0.6)} 个体被寒冷清除`;
+        break;
+
+      case 'landplants': {
+        let n = 0;
+        for (const a of this.agents) {
+          if (!a.alive || n > aliveCount(this) * 0.6) continue;
+          if (!a.genome.organelles.includes('chloroplast') && a.genome.organelles.length < 7) {
+            a.genome.organelles.push('chloroplast');
+            a.strategy = deriveStrategy(a.genome);
+            n++;
+          }
+        }
+        this.nutrientMul = 1.6;
+        this.nutrientMulUntil = this.tick + 900;
+        message = `${n} 个体获得叶绿体，有机养分供给上升`;
+        break;
+      }
+
+      case 'insects':
+        for (const a of this.agents) {
+          if (!a.alive) continue;
+          a.genome.size = clamp(a.genome.size * 0.82, 2.4, 9);
+        }
+        this.mutationBoost = 1.5;
+        this.mutationBoostUntil = this.tick + 500;
+        message = '体型小型化 + 变异加快：数量激增但个体更脆弱';
+        break;
+
+      case 'forests':
+        this.nutrientMul = 2;
+        this.nutrientMulUntil = this.tick + 900;
+        this.tempLock = { value: 0.36, until: this.tick + 900 };
+        message = '巨型蕨类森林：养分供给 ×2，气温略降';
+        break;
+
+      case 'tetrapods':
+        this.sizeScale = 1.15;
+        for (const a of this.agents) {
+          if (!a.alive) continue;
+          a.genome.size = clamp(a.genome.size * 1.15, 2.4, 9);
+        }
+        message = '四足登陆：全体体型上调 15%，捕食能力上移';
+        break;
+
+      case 'pangaea': {
+        // 群体一分为二：把一半个体挪到对侧并改变色相，从此互不来往
+        const alive = this.agents.filter((a) => a.alive);
+        const half = alive.slice(Math.floor(alive.length / 2));
+        for (const a of half) {
+          a.x = -a.x * 0.85 - rand(20, 160);
+          a.y = -a.y * 0.85 - rand(20, 160);
+          a.genome.hue = (a.genome.hue + 62) % 360;
+          if (a.colonyId !== null) {
+            this.colonies.get(a.colonyId)?.memberIds.delete(a.id);
+            a.colonyId = null;
+            a.role = null;
+          }
+        }
+        message = `冈瓦纳分裂：${half.length} 个体被隔离到另一半皿区`;
+        break;
+      }
+
+      case 'dinosaurs':
+        for (const a of this.agents) {
+          if (!a.alive) continue;
+          if (!a.genome.organelles.includes('shell') && a.genome.organelles.length < 7) {
+            a.genome.organelles.push('shell');
+            a.strategy = deriveStrategy(a.genome);
+          }
+          a.genome.size = clamp(a.genome.size * 1.12, 2.4, 9);
+        }
+        this.sizeScale = 1.25;
+        message = '鳞甲普及（防御 ×1.5），体型上限再上调 25%';
+        break;
+
+      case 'permian':
+        message = `二叠纪末：${this.massDeath(0.96)} 个体死亡 —— 生态位几乎清空`;
+        break;
+
+      case 'cretaceous': {
+        const killed = this.massDeath(0.9, (a) => a.genome.size > 5.5 ? 1.6 : 1);
+        message = `希克苏鲁伯撞击：${killed} 个体死亡，大型猎手优先覆灭`;
+        break;
+      }
+
+      case 'mammals':
+        for (const a of this.agents) {
+          if (!a.alive) continue;
+          a.genome.size = clamp(a.genome.size * 0.8, 2.4, 9);
+        }
+        this.sizeScale = 0.85;
+        let n = 0;
+        for (const a of this.agents) {
+          if (!a.alive || n > 60) continue;
+          if (!a.genome.organelles.includes('lysosome') && a.genome.organelles.length < 7) {
+            a.genome.organelles.push('lysosome');
+            a.strategy = deriveStrategy(a.genome);
+            n++;
+          }
+        }
+        message = `猎手被小型哺乳替代（体型上限下调），${n} 个体获得溶酶体`;
+        break;
+
+      case 'iceage':
+        this.tempLock = { value: 0.2, until: this.tick + 800 };
+        for (const a of this.agents) {
+          if (!a.alive) continue;
+          a.genome.size = clamp(a.genome.size * 1.18, 2.4, 9);
+        }
+        this.sizeScale = 1.18;
+        message = '冰期降临：800 tick 持续低温，物种趋向大型化';
+        break;
+
+      case 'anthropocene':
+        this.nutrientMul = 2;
+        this.nutrientMulUntil = Number.MAX_SAFE_INTEGER;
+        this.tempLock = null;
+        this.glacial = 0;
+        message = '养分供给 ×2，环境全面可控 —— 演化交到人类手里';
+        break;
+
+      default:
+        return { ok: false, message: '该事件尚未实现' };
+    }
+
+    this.geoEventsTriggered.add(id);
+    const after = this.agents.filter((a) => a.alive).length;
+
+    if (!opts.silent) {
+      this.log(
+        'earth',
+        `【${def.zh}】${def.effectZh} —— ${message}（种群 ${before} → ${after}）`,
+        `[${def.en}] ${def.effectZh} — ${message}`,
+      );
+      this.effects.push({ type: 'earth', x: 0, y: 0, tick: this.tick });
+    }
+    return { ok: true, message };
+  }
+
+  /** 重新接种（对外）：清空种群与历史，但保留时间轴与事件流 */
+  reInoculatePublic() {
+    this.reInoculate();
+  }
+
+  /** 重新接种：清空种群与历史，但保留时间轴与事件流 */
+  private reInoculate() {
+    this.agents = [];
+    this.food = [];
+    this.colonies.clear();
+    this.byId.clear();
+    this.totalBirths = 0;
+    this.totalDeaths = 0;
+    this.totalKills = 0;
+    this.totalCannibalKills = 0;
+    this.apexId = null;
+    this.nutrient = 1;
+    this.sizeScale = 1;
+    this.tempLock = null;
+    this.glacial = 0;
+    const base: Genome = {
+      hue: rand(0, 360),
+      size: rand(3.2, 4.2),
+      maxSpeed: rand(0.9, 1.3),
+      sense: rand(55, 80),
+      aggression: rand(0.15, 0.45),
+      efficiency: rand(0.4, 0.6),
+      organelles: [],
+    };
+    const rootHue = rand(0, 360);
+    const lineages = [0, 0.33, 0.66].map((f) => (rootHue + f * 360 + rand(-9, 9) + 360) % 360);
+    for (let i = 0; i < this.config.initialCount; i++) {
+      const hue = (lineages[i % lineages.length] + rand(-9, 9) + 360) % 360;
+      this.agents.push(this.spawnFrom({ ...base, hue, organelles: [] }, undefined, true));
+    }
+    for (let i = 0; i < 260; i++) this.spawnFood();
+  }
+
+  /** 一次性杀死比例的个体，并留下尸体碎屑 */
+  private massDeath(fraction: number, weight?: (a: Agent) => number): number {
+    const alive = this.agents.filter((a) => a.alive);
+    let killed = 0;
+    for (const a of alive) {
+      const p = Math.min(1, fraction * (weight ? weight(a) : 1));
+      if (Math.random() < p) {
+        a.alive = false;
+        a.energy = 0;
+        killed++;
+        this.totalDeaths++;
+        this.spawnFood(a.x, a.y, a.genome.size * 5, a.genome.hue, 'detritus');
+        if (a.colonyId !== null) {
+          const col = this.colonies.get(a.colonyId);
+          col?.memberIds.delete(a.id);
+          col?.roles.delete(a.id);
+        }
+      }
+    }
+    return killed;
+  }
+
+  private applyGreatOxidation(): string {
+    let killed = 0;
+    for (const a of this.agents) {
+      if (!a.alive) continue;
+      const anaerobic = !a.genome.organelles.includes('aerobe') && !a.genome.organelles.includes('mitochondria');
+      if (anaerobic && Math.random() < 0.62) {
+        a.alive = false;
+        a.energy = 0;
+        killed++;
+        this.totalDeaths++;
+        this.spawnFood(a.x, a.y, a.genome.size * 5, a.genome.hue, 'detritus');
+        if (a.colonyId !== null) this.colonies.get(a.colonyId)?.memberIds.delete(a.id);
+      }
+    }
+    this.oxygen = 1;
+    return `${killed} 个厌氧生物在毒气中灭绝，氧气浓度永久上升`;
+  }
+
+  private applySnowball(): string {
+    this.glacial = 420;
+    let killed = 0;
+    for (const a of this.agents) {
+      if (!a.alive) continue;
+      const spores = a.genome.organelles.includes('endospore');
+      if (!spores && Math.random() < 0.42) {
+        a.alive = false;
+        a.energy = 0;
+        killed++;
+        this.totalDeaths++;
+        this.spawnFood(a.x, a.y, a.genome.size * 4, a.genome.hue, 'detritus');
+        if (a.colonyId !== null) this.colonies.get(a.colonyId)?.memberIds.delete(a.id);
+      } else if (spores) {
+        a.dormant = true;
+        a.energy = 0;
+      }
+    }
+    return `${killed} 个细胞冻毙，能形成芽孢的谱系进入休眠`;
+  }
+
   /* ───────── 地球史事件 ───────── */
 
   /**
@@ -1345,27 +1693,14 @@ export class Simulation {
       const alive = this.agents.filter((a) => a.alive);
       const photo = alive.filter((a) => a.genome.organelles.includes('chloroplast')).length;
       const frac = alive.length ? photo / alive.length : 0;
-      if (frac >= 0.12 && alive.length >= 40 && this.tick > 260) {
+      if ((frac >= 0.1 && alive.length >= 40 && this.tick > 260) || this.tick > 2400) {
+        this.applyGeoEvent('greatoxidation', { silent: true });
         this.seenEarthEvents.add('goe');
-        let killed = 0;
-        for (const a of alive) {
-          const anaerobic = !a.genome.organelles.includes('aerobe') && !a.genome.organelles.includes('mitochondria');
-          if (anaerobic && Math.random() < 0.62) {
-            a.alive = false;
-            a.energy = 0;
-            killed++;
-            this.totalDeaths++;
-            this.spawnFood(a.x, a.y, a.genome.size * 5, a.genome.hue, 'detritus');
-            if (a.colonyId !== null) this.colonies.get(a.colonyId)?.memberIds.delete(a.id);
-          }
-        }
-        this.oxygen = 1;
-        this.effects.push({ type: 'earth', x: 0, y: 0, tick: this.tick });
         const def = EARTH_EVENTS.goe;
         this.log(
           'earth',
-          `【${def.zh}】${def.descZh} —— ${killed} 个厌氧生物在毒气中灭绝`,
-          `[${def.en}] ${def.descEn} — ${killed} anaerobes perished in the poison`,
+          `【${def.zh}】${def.descZh}`,
+          `[${def.en}] ${def.descEn}`,
         );
       }
     }
@@ -1373,38 +1708,22 @@ export class Simulation {
     // ── 雪球地球 ──
     if (!this.seenEarthEvents.has('snowball') && this.seenEarthEvents.has('goe')) {
       const alive = this.agents.filter((a) => a.alive);
-      if (this.tick > 1400 && alive.length >= 120) {
+      if ((this.tick > 1400 && alive.length >= 120) || this.tick > 3200) {
+        this.applyGeoEvent('snowball', { silent: true });
         this.seenEarthEvents.add('snowball');
-        this.glacial = 420;
-        let killed = 0;
-        for (const a of alive) {
-          const spores = a.genome.organelles.includes('endospore');
-          if (!spores && Math.random() < 0.42) {
-            a.alive = false;
-            a.energy = 0;
-            killed++;
-            this.totalDeaths++;
-            this.spawnFood(a.x, a.y, a.genome.size * 4, a.genome.hue, 'detritus');
-            if (a.colonyId !== null) this.colonies.get(a.colonyId)?.memberIds.delete(a.id);
-          } else if (spores) {
-            a.dormant = true;
-            a.energy = 0;
-          }
-        }
-        this.effects.push({ type: 'earth', x: 0, y: 0, tick: this.tick });
         const def = EARTH_EVENTS.snowball;
         this.log(
           'earth',
-          `【${def.zh}】${def.descZh} —— ${killed} 个细胞冻毙，能形成芽孢的谱系进入休眠`,
-          `[${def.en}] ${def.descEn} — ${killed} cells froze; spore-formers went dormant`,
+          `【${def.zh}】${def.descZh}`,
+          `[${def.en}] ${def.descEn}`,
         );
       }
     }
 
     // ── 寒武纪爆发 ──
-    if (!this.seenEarthEvents.has('cambrian') && this.seenRoutes.size > 0) {
+    if (!this.seenEarthEvents.has('cambrian') && (this.seenRoutes.size > 0 || this.tick > 4200)) {
       this.seenEarthEvents.add('cambrian');
-      this.cambrian = 320;
+      this.applyGeoEvent('cambrian', { silent: true });
       this.effects.push({ type: 'earth', x: 0, y: 0, tick: this.tick });
       const def = EARTH_EVENTS.cambrian;
       this.log(
@@ -1583,6 +1902,7 @@ export class Simulation {
     killer.energy = Math.min(killer.energy, 400);
     killer.kills++;
     killer.flash = 1;
+    killer.digest = 14; // 捕食后进入消化期，防止无休止的杀戮循环
     // 捕食会反哺体型：大个头的猎手更容易吃掉猎物与同类
     killer.genome.size = clamp(killer.genome.size + 0.06, 2.4, 9);
     this.totalKills++;
@@ -1595,11 +1915,15 @@ export class Simulation {
       this.totalCannibalKills++;
       this.lastCannibalTick = this.tick;
       this.effects.push({ type: 'cannibal', x: victim.x, y: victim.y, tick: this.tick });
-      this.log(
-        'cannibal',
-        `食同族：猎手 #${killer.id} 吞噬了同族 #${victim.id}`,
-        `Cannibalism: hunter #${killer.id} devoured its own kind #${victim.id}`,
-      );
+      // 同一段时间内只播报一次，免得编年史被同类相食刷屏
+      if (this.tick - (this.lastCannibalLogTick ?? -999) > 60) {
+        this.lastCannibalLogTick = this.tick;
+        this.log(
+          'cannibal',
+          `食同族：猎手 #${killer.id} 吞噬了同族 #${victim.id}`,
+          `Cannibalism: hunter #${killer.id} devoured its own kind #${victim.id}`,
+        );
+      }
     }
 
     if (victim.colonyId !== null) {

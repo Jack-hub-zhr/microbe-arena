@@ -135,11 +135,24 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
     const camScale = Number.isFinite(camParam) ? Math.max(0.12, Math.min(2, camParam)) : 1;
     camera.position.set(0, 19.5 * camScale, 20 * camScale);
 
+    /** 竖屏时把镜头拉远并抬高，否则培养皿会被裁掉一大半 */
+    const fitCamera = () => {
+      const w = mount.clientWidth || 1;
+      const h = mount.clientHeight || 1;
+      const aspect = w / h;
+      const portrait = aspect < 0.9;
+      // 竖屏：镜头拉远一点并压低视角，让整只皿尽量占满宽度又不出框
+      const k = portrait ? Math.min(1.62, 0.74 / Math.max(0.42, aspect)) : 1;
+      camera.position.set(0, 19.5 * k * (portrait ? 1.12 : 1), 20 * k);
+      camera.updateProjectionMatrix();
+    };
+    fitCamera();
+
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.075;
     controls.minDistance = 5;
-    controls.maxDistance = 58;
+    controls.maxDistance = 140;
     controls.maxPolarAngle = Math.PI * 0.49;
     controls.target.set(0, 0, 0);
     controls.update();
@@ -810,6 +823,7 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
       if (!w || !h) return;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      fitCamera();
       renderer.setSize(w, h);
     };
     const ro = new ResizeObserver(resize);
@@ -860,7 +874,10 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
         const visualHue = a.genome.hue;
         const hueColor = new THREE.Color().setHSL(visualHue / 360, 0.74, 0.46);
         // 职能色与生态位色混合，多细胞成员一眼可辨
-        if (a.role) {
+        if (a.alien) {
+          // 外星物种：固定的青绿色，与三条创始谱系明显区分
+          colorTmp.set('#4fd6c0');
+        } else if (a.role) {
           roleColor.set(CELL_ROLES[a.role].color);
           colorTmp.copy(hueColor).lerp(roleColor, 0.55);
         } else {
@@ -869,7 +886,10 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
 
         const dormant = a.dormant;
         const sizeScale =
-          a.genome.size * S * CELL_VIS * (a.role === 'core' ? 1.15 : 1) * (dormant ? 0.6 : 1);
+          a.genome.size * S * CELL_VIS *
+          (a.role === 'core' ? 1.15 : 1) *
+          (dormant ? 0.6 : 1) *
+          (a.alien ? 1.2 : 1);
         const bob = Math.sin(t * 1.6 + a.id * 1.7) * 0.012;
         dummy.position.set(a.x * S, sizeScale * 0.5 + 0.02 + bob, a.y * S);
         dummy.rotation.set(0, t * 0.4 + a.id * 0.7, 0);

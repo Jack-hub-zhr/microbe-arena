@@ -104,18 +104,22 @@ export default function GodRail({ tool, onSelect, lang, onActiveRect }: Props) {
   const toolRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   return (
-    <div ref={railRef} className="pointer-events-auto flex flex-col items-start gap-2">
+    <div
+      ref={railRef}
+      className="pointer-events-auto flex flex-col items-start gap-2
+        max-md:flex-row max-md:items-center max-md:gap-1.5"
+    >
       {/* 折叠 / 展开的胶囊开关 */}
       <button
         onClick={() => setOpen((o) => !o)}
         className={cx(
-          'glass capsule-btn h-9 pl-3 pr-3.5 flex items-center gap-2 text-[10px] tracking-wider',
+          'glass capsule-btn h-9 pl-3 pr-3.5 flex items-center gap-2 text-[10px] tracking-wider max-md:h-8 max-md:pl-2.5 max-md:pr-2.5 max-md:shrink-0',
           open ? 'text-white/85' : 'text-white/55',
         )}
         title={lang === 'zh' ? '上帝之手' : 'Hand of God'}
       >
         <IconSpark size={13} />
-        <span className="label-xs">{lang === 'zh' ? '上帝之手' : 'GOD HAND'}</span>
+        <span className="label-xs max-md:hidden">{lang === 'zh' ? '上帝之手' : 'GOD HAND'}</span>
         <span
           className={cx(
             'w-1.5 h-1.5 rounded-full transition-all duration-300',
@@ -129,10 +133,12 @@ export default function GodRail({ tool, onSelect, lang, onActiveRect }: Props) {
         ref={columnRef}
         className={cx(
           'glass capsule flex flex-col gap-1 p-1.5 overflow-hidden',
+          'max-md:flex-row max-md:gap-1 max-md:p-1',
           open ? 'pop-in' : 'pop-out pointer-events-none',
         )}
         style={{
           transformOrigin: '12px 0px',
+          // 手机上工具列是横排，从左端展开更自然
           maxHeight: open ? 420 : 0,
           opacity: open ? 1 : 0,
           paddingLeft: open ? 6 : 0,
@@ -158,7 +164,7 @@ export default function GodRail({ tool, onSelect, lang, onActiveRect }: Props) {
               }}
               title={lang === 'zh' ? t.hint : t.hintEn}
               className={cx(
-                'capsule-btn relative w-10 h-10 flex flex-col items-center justify-center gap-0.5 shrink-0',
+                'capsule-btn relative w-10 h-10 flex flex-col items-center justify-center gap-0.5 shrink-0 max-md:w-9 max-md:h-9',
                 active ? '' : 'text-white/58 hover:text-white',
               )}
               style={
@@ -172,7 +178,7 @@ export default function GodRail({ tool, onSelect, lang, onActiveRect }: Props) {
               }
             >
               {t.icon}
-              <span className="text-[8px] leading-none">
+              <span className="text-[8px] leading-none max-md:text-[7px]">
                 {lang === 'zh' ? t.label : t.labelEn}
               </span>
             </button>

@@ -61,6 +61,10 @@ export interface Agent {
   lastFeedTick: number;
   /** 芽孢休眠中：不可被天罚 / 瘟疫杀死 */
   dormant: boolean;
+  /** 外星入侵物种：有专属视觉标识，肉眼可辨 */
+  alien: boolean;
+  /** 消化剩余 tick：刚进食完的猎手需要消化，不能立刻再次捕杀 */
+  digest: number;
 }
 
 export interface Food {

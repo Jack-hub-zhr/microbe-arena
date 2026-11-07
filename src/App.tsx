@@ -51,6 +51,17 @@ export default function App() {
   const [drawerTrigger, setDrawerTrigger] = useState<DOMRect | null>(null);
 
   const [toolHintRect, setToolHintRect] = useState<DOMRect | null>(null);
+  const [toast, setToast] = useState<{ title: string; detail: string; hue: string; id: number } | null>(null);
+
+  const showToast = useCallback((title: string, detail: string, hue: string) => {
+    setToast({ title, detail, hue, id: Date.now() });
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 4600);
+    return () => window.clearTimeout(t);
+  }, [toast]);
   const [hintTool, setHintTool] = useState<ToolDef | null>(null);
 
   const toolRef = useRef<ToolId>('inspect');
@@ -126,13 +137,19 @@ export default function App() {
     (t: ToolDef) => {
       setHintTool(t);
       if (t.id === 'alien') {
+        const before = engine.agents.filter((a) => a.alive).length;
         engine.godAliens(18);
         setTick((v) => v + 1);
+        showToast('天外入侵', '18 个携带未知基因的外来物种进入培养皿（青绿色个体）', '#4fd6c0');
+        void before;
         return;
       }
       if (t.id === 'plague') {
+        const before = engine.agents.filter((a) => a.alive).length;
         engine.godPlague(0.4);
+        const after = engine.agents.filter((a) => a.alive).length;
         setTick((v) => v + 1);
+        showToast('瘟疫席卷', `${before} → ${after}：约四成生命被带走，幸存者将占据空出的生态位`, '#d2604f');
         return;
       }
       setTool(t.id as ToolId);
@@ -188,16 +205,17 @@ export default function App() {
             <div className="w-2 h-2 rounded-full bg-[#84b96b] animate-pulse" />
           </div>
           <div className="leading-none">
-            <h1 className="text-[13px] font-semibold tracking-wide">
+            <h1 className="text-[13px] font-semibold tracking-wide max-md:text-[11px] max-md:whitespace-nowrap">
               {lang === 'zh' ? '微生物进化大赛' : 'Microbe Evolution Arena'}
             </h1>
-            <span className="label-xs text-[#4fb3c4]/65">PETRI ARENA</span>
+            <span className="label-xs text-[#4fb3c4]/65 max-md:hidden">PETRI ARENA</span>
           </div>
         </div>
 
         <div className="flex-1" />
 
         {/* 状态 */}
+        {/* 桌面状态条 */}
         <div className="pointer-events-auto glass capsule h-11 px-4 flex items-center gap-4 text-[11px] num text-white/55 max-md:hidden">
           <span>
             {lang === 'zh' ? '世代时刻' : 'Tick'}{' '}
@@ -233,6 +251,22 @@ export default function App() {
           </span>
         </div>
 
+        {/* 手机版紧凑状态条 */}
+        <div className="pointer-events-auto md:hidden glass capsule h-9 px-3 flex items-center gap-2.5 text-[10px] num text-white/55">
+          <span>
+            {lang === 'zh' ? '世代' : 'Tick'}{' '}
+            <b className="text-[#d9a441]">{engine.tick.toLocaleString()}</b>
+          </span>
+          <span>
+            {lang === 'zh' ? '存活' : 'Alive'}{' '}
+            <b className="text-[#84b96b]">{alive.length}</b>
+          </span>
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ background: running ? '#84b96b' : 'rgba(255,255,255,.3)' }}
+          />
+        </div>
+
         <button
           onClick={() => setLang((l) => (l === 'zh' ? 'en' : 'zh'))}
           className="pointer-events-auto glass capsule-btn w-10 h-10 text-white/70 hover:text-white"
@@ -244,7 +278,9 @@ export default function App() {
 
       {/* ═══════════ 左侧：上帝之手 + 环境控制 ═══════════ */}
       <div
-        className="absolute left-4 top-[76px] bottom-4 w-[230px] flex flex-col justify-start gap-3 overflow-y-auto scroll-thin pointer-events-none z-20"
+        className="absolute left-4 top-[76px] bottom-4 w-[230px] flex flex-col justify-start gap-3 overflow-y-auto scroll-thin pointer-events-none z-20
+          max-md:left-2 max-md:right-2 max-md:top-auto max-md:bottom-[78px] max-md:w-auto max-md:flex-row
+          max-md:items-end max-md:gap-2 max-md:overflow-x-auto max-md:overflow-y-hidden"
         style={{ scrollbarWidth: 'none' }}
       >
         <GodRail tool={tool} onSelect={onToolSelect} lang={lang} onActiveRect={setToolHintRect} />
@@ -267,12 +303,12 @@ export default function App() {
       )}
 
       {/* ═══════════ 右侧：收起的胶囊触发器（内含实时圆饼图） ═══════════ */}
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-end gap-2.5 z-20">
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col items-end gap-2.5 z-20 max-md:right-2 max-md:gap-1.5">
         {/* 实时圆饼图 —— 折叠状态下也一直显示 */}
         <button
           data-pop-anchor
           onClick={(e) => openDrawer('ecology', e.currentTarget.getBoundingClientRect())}
-          className="glass capsule-btn p-1.5 flex items-center gap-2 group"
+          className="glass capsule-btn p-1.5 flex items-center gap-2 group max-md:p-1"
           title={lang === 'zh' ? '生态构成（实时）' : 'Live ecology'}
         >
           <EcologyPie
@@ -293,6 +329,7 @@ export default function App() {
         </button>
 
         {[
+          { tab: 'geo' as DrawerTab, icon: <IconGlobe size={15} />, label: lang === 'zh' ? '地球史' : 'Earth', color: '#d9a441' },
           { tab: 'lineage' as DrawerTab, icon: <IconSpark size={15} />, label: lang === 'zh' ? '演化路线' : 'Lineage', color: '#d4748e' },
           { tab: 'ranks' as DrawerTab, icon: <IconTrophy size={15} />, label: lang === 'zh' ? '猎杀榜' : 'Ranks', color: '#e2663f' },
           { tab: 'codex' as DrawerTab, icon: <IconBook size={15} />, label: lang === 'zh' ? '图鉴' : 'Codex', color: '#84b96b' },
@@ -302,7 +339,7 @@ export default function App() {
             key={b.tab}
             data-pop-anchor
             onClick={(e) => openDrawer(b.tab, e.currentTarget.getBoundingClientRect())}
-            className="glass capsule-btn w-11 h-11 flex items-center justify-center"
+            className="glass capsule-btn w-11 h-11 flex items-center justify-center max-md:w-9 max-md:h-9"
             style={{ color: b.color }}
             title={b.label}
           >
@@ -312,8 +349,8 @@ export default function App() {
       </div>
 
       {/* ═══════════ 底部：时间控制 ═══════════ */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
-        <div className="glass capsule h-12 px-2.5 flex items-center gap-1.5">
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 max-md:bottom-2">
+        <div className="glass capsule h-12 px-2.5 flex items-center gap-1.5 max-md:h-10 max-md:px-1.5 max-md:gap-0.5">
           <button
             onClick={() => setRunning((r) => !r)}
             className={cx(
@@ -398,7 +435,7 @@ export default function App() {
       {selected && (
         <button
           onClick={(e) => openDrawer('cell', e.currentTarget.getBoundingClientRect())}
-          className="glass capsule h-10 px-3.5 flex items-center gap-2.5 z-20 absolute right-4 bottom-[68px]"
+          className="glass capsule h-10 px-3.5 flex items-center gap-2.5 z-20 absolute right-4 bottom-[68px] max-md:bottom-[132px] max-md:h-8 max-md:px-2.5 max-md:text-[10px]"
         >
           <span
             className="w-4 h-4 rounded-full"
@@ -428,7 +465,30 @@ export default function App() {
         engine={engine}
         lang={lang}
         selected={selected}
+        onGeoEvent={showToast}
       />
+
+      {/* 事件提示条 */}
+      {toast && (
+        <div
+          key={toast.id}
+          className="pointer-events-none fixed left-1/2 top-[64px] z-[60] w-[min(440px,calc(100vw-24px))] -translate-x-1/2"
+          style={{ animation: 'bubble-in .28s cubic-bezier(.22,1,.36,1) both' }}
+        >
+          <div
+            className="glass glass-strong rounded-[14px] px-3.5 py-2.5"
+            style={{ borderColor: `${toast.hue}44` }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: toast.hue }} />
+              <span className="text-[12px]" style={{ color: toast.hue }}>
+                {toast.title}
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] leading-relaxed text-white/62">{toast.detail}</p>
+          </div>
+        </div>
+      )}
 
       {/* 介绍页 */}
       {!started && <Intro lang={lang} onEnter={() => setStarted(true)} />}

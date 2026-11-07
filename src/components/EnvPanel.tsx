@@ -57,7 +57,9 @@ export default function EnvPanel({ engine, lang, refresh }: Props) {
         title={lang === 'zh' ? '环境控制' : 'Environment'}
       >
         <IconSun size={13} />
-        <span className="label-xs">{lang === 'zh' ? '环境控制' : 'ENVIRONMENT'}</span>
+        <span className="label-xs max-md:hidden">
+          {lang === 'zh' ? '环境控制' : 'ENVIRONMENT'}
+        </span>
         <span
           className={cx(
             'w-1.5 h-1.5 rounded-full transition-all duration-300',
@@ -66,14 +68,17 @@ export default function EnvPanel({ engine, lang, refresh }: Props) {
         />
       </button>
 
+      {/* 手机上：展开的面板脱离横排，变成浮在工具条上方的浮层 */}
       <div
         ref={panelRef}
         className={cx(
           'glass rounded-[14px] overflow-hidden',
+          'max-md:fixed max-md:bottom-[126px] max-md:left-2 max-md:right-2 max-md:w-auto max-md:z-30',
           open ? 'pop-in' : 'pop-out pointer-events-none',
         )}
         style={{
           transformOrigin: '12px 0px',
+          // 手机上是底部浮层，原点挪到底边中间
           maxHeight: open ? 320 : 0,
           opacity: open ? 1 : 0,
           transition:

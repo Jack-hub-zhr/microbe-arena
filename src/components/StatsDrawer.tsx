@@ -13,11 +13,13 @@ import {
   IconCells,
   IconChart,
   IconClose,
+  IconGlobe,
   IconScroll,
   IconSpark,
   IconTrophy,
 } from './Icons';
 import LineageTree from './LineageTree';
+import GeoEventPanel from './GeoEventPanel';
 import { TraitIcon } from './TraitIcons';
 import {
   CELL_ROLES,
@@ -30,7 +32,7 @@ import type { OrganelleId } from '../engine/lineages';
 import type { Simulation } from '../engine/Simulation';
 import type { Agent, Strategy } from '../engine/types';
 
-export type DrawerTab = 'ecology' | 'lineage' | 'ranks' | 'codex' | 'chronicle' | 'cell';
+export type DrawerTab = 'ecology' | 'lineage' | 'geo' | 'ranks' | 'codex' | 'chronicle' | 'cell';
 
 interface Props {
   open: boolean;
@@ -41,11 +43,13 @@ interface Props {
   engine: Simulation;
   lang: 'zh' | 'en';
   selected: Agent | null;
+  onGeoEvent?: (title: string, detail: string, hue: string) => void;
 }
 
 const TABS: { id: DrawerTab; icon: ReactNode; zh: string; en: string }[] = [
   { id: 'ecology', icon: <IconChart size={14} />, zh: '生态', en: 'Eco' },
   { id: 'lineage', icon: <IconSpark size={14} />, zh: '演化', en: 'Tree' },
+  { id: 'geo', icon: <IconGlobe size={14} />, zh: '地球史', en: 'Earth' },
   { id: 'ranks', icon: <IconTrophy size={14} />, zh: '榜单', en: 'Ranks' },
   { id: 'codex', icon: <IconBook size={14} />, zh: '图鉴', en: 'Codex' },
   { id: 'chronicle', icon: <IconScroll size={14} />, zh: '编年', en: 'Log' },
@@ -61,6 +65,7 @@ export default function StatsDrawer({
   engine,
   lang,
   selected,
+  onGeoEvent,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [style, setStyle] = useState<React.CSSProperties>({ opacity: 0, visibility: 'hidden' });
@@ -138,7 +143,7 @@ export default function StatsDrawer({
     >
       {/* 顶部：标签页 */}
       <div className="flex items-center gap-1 px-3 pt-3 pb-2 shrink-0">
-        <div className="flex-1 flex items-center gap-0.5 p-1 rounded-[8px] bg-white/[0.045] border border-white/8">
+        <div className="flex-1 flex items-center gap-0.5 p-1 rounded-[8px] bg-white/[0.045] border border-white/8 overflow-x-auto scroll-thin">
           {TABS.map((t) => {
             const active = tab === t.id;
             return (
@@ -147,7 +152,7 @@ export default function StatsDrawer({
                 onClick={() => onTab(t.id)}
                 title={lang === 'zh' ? t.zh : t.en}
                 className={cx(
-                  'relative flex-1 h-8 rounded-full flex items-center justify-center gap-1 transition-all duration-300',
+                  'relative shrink-0 h-8 px-2 rounded-full flex items-center justify-center gap-1 transition-all duration-300',
                   active ? 'text-white' : 'text-white/40 hover:text-white/75',
                 )}
                 style={
@@ -179,6 +184,13 @@ export default function StatsDrawer({
       <div className="flex-1 overflow-y-auto scroll-thin px-4 pb-4">
         {tab === 'ecology' && <EcologyTab engine={engine} lang={lang} />}
         {tab === 'lineage' && <LineageTree engine={engine} lang={lang} />}
+        {tab === 'geo' && (
+          <GeoEventPanel
+            engine={engine}
+            lang={lang}
+            onFire={(t, d, h) => onGeoEvent?.(t, d, h)}
+          />
+        )}
         {tab === 'ranks' && <RanksTab engine={engine} lang={lang} />}
         {tab === 'codex' && <CodexTab engine={engine} lang={lang} />}
         {tab === 'chronicle' && <ChronicleTab engine={engine} lang={lang} />}
