@@ -245,6 +245,17 @@ export default function AgentPanel({ engine, lang, selected }: Props) {
             </div>
           )}
 
+          {stats.throttled > 0 && stats.providerId === 'pollinations' && (
+            <button
+              onClick={() => setShowProviders(true)}
+              className="text-[9.5px] text-white/34 hover:text-[#a2db3c]/85 leading-relaxed text-left transition-colors"
+            >
+              {lang === 'zh'
+                ? '想提速？填一个免费 key（OpenRouter / Groq / Gemini）就能到 15~30 次/分钟 →'
+                : 'Want more? Add a free key (OpenRouter / Groq / Gemini) for 15–30 req/min →'}
+            </button>
+          )}
+
           <button
             onClick={() => setShowProviders((s) => !s)}
             className="w-full text-[10px] text-white/35 hover:text-white/70 flex items-center gap-1.5 pt-0.5"
