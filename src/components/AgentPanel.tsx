@@ -348,7 +348,7 @@ export default function AgentPanel({ engine, lang, selected }: Props) {
             </div>
             <Slider
               value={sch.rpmLimit}
-              min={4}
+              min={2}
               max={60}
               color="#e8c46a"
               onChange={(v) => {
@@ -390,7 +390,7 @@ export default function AgentPanel({ engine, lang, selected }: Props) {
             c: '#7dd3fc',
           },
           { k: lang === 'zh' ? '被限流' : 'Throttled', v: stats.throttled, c: '#e8c46a' },
-          { k: lang === 'zh' ? '平均延迟' : 'Latency', v: `${stats.avgLatencyMs}ms`, c: '#d9a441' },
+          { k: lang === 'zh' ? '中位延迟' : 'Latency (p50)', v: `${stats.avgLatencyMs}ms`, c: '#d9a441' },
           { k: lang === 'zh' ? '消耗 token' : 'Tokens', v: stats.tokens.toLocaleString(), c: '#7c8fb8' },
         ].map((s) => (
           <div key={s.k}>
