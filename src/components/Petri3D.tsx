@@ -417,6 +417,7 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
             varying float vFlash;
             varying float vThink;
             varying float vRole;
+            uniform float uTime;
           `,
         )
         .replace(
