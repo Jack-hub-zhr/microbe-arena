@@ -15,6 +15,14 @@
  */
 
 import { GEO_EVENT_MAP } from './geoEvents';
+import {
+  createMind,
+  localDecide,
+  type MindContext,
+  type MindDecision,
+  type MindState,
+} from './minds';
+import { MindScheduler, type MindHost } from './mindScheduler';
 import type {
   Agent,
   CellRole,
@@ -304,9 +312,18 @@ export class Simulation {
   private lastCannibalLogTick: number | null = null;
   /** 「首个多细胞聚合体」里程碑只播报一次 */
   colonyEventDone = false;
+  /** 上一次把 agent 的决策写进编年史的 tick */
+  private lastMindLogTick: number | null = null;
 
   private agentGrid: SpatialGrid;
   private foodGrid: FoodGrid;
+
+  /* ───────── 心智层：每个细胞都挂一个 agent ───────── */
+
+  /** id -> 该细胞的心智状态（性格 / 记忆 / 当前决策） */
+  readonly mindStates = new Map<number, MindState>();
+  /** LLM 调度器：负责找免费接口、限流、排队、兜底 */
+  readonly scheduler = new MindScheduler();
 
   constructor(config?: Partial<SimConfig>) {
     this.config = {
@@ -319,6 +336,7 @@ export class Simulation {
     };
     this.agentGrid = new SpatialGrid(this.config.radius, 60);
     this.foodGrid = new FoodGrid(this.config.radius, 220);
+    this.scheduler.setHost(this as unknown as MindHost);
     this.reset();
   }
 
@@ -333,6 +351,7 @@ export class Simulation {
     this.effects = [];
     this.byId.clear();
     this.modCache.clear();
+    this.mindStates.clear();
     this.tick = 0;
     this.seenOrganelles.clear();
     this.seenMilestones.clear();
@@ -428,6 +447,9 @@ export class Simulation {
       digest: 0,
     };
     this.byId.set(agent.id, agent);
+    // 新生个体继承父母的性格（带变异），并立刻做一次本地决策
+    const mind = createMind(agent, parent ? this.mindStates.get(parent.id) : undefined);
+    this.mindStates.set(agent.id, mind);
     return agent;
   }
 
@@ -793,6 +815,52 @@ export class Simulation {
         }
       }
 
+      /* ── 心智层：agent 感知威胁与配偶，并把自己的意志加进转向 ──
+         只有「智能体模式」打开时才有开销；关闭时引擎行为与从前完全一致。 */
+      const mindInfluence = this.scheduler.enabled ? this.scheduler.influence : 0;
+      let mindDecision: MindDecision | null = null;
+      let threat: Agent | null = null;
+      let threatDist = Infinity;
+      let mate: Agent | null = null;
+      let mateDist = Infinity;
+      if (mindInfluence > 0) {
+        const mind = this.mindStates.get(a.id);
+        if (mind) {
+          // 没有 LLM 决策、或本地决策已过时，就用本地策略顶上（永远不让 agent 哑掉）
+          const cur = mind.decision;
+          const staleLocal =
+            !cur || (cur.source === 'local' && this.tick - mind.lastLocalTick >= 14);
+          const staleLlm = !!cur && cur.source === 'llm' && this.tick > mind.goalUntil;
+          if (staleLocal || staleLlm) {
+            mind.decision = localDecide(this.observe(a), mind.personality, this.tick);
+            mind.lastLocalTick = this.tick;
+            mind.thinkCount++;
+          }
+          mindDecision = mind.decision;
+          const reach2 = sense * 1.35 + 24;
+          for (const b of this.agentGrid.near(a.x, a.y)) {
+            if (b === a || !b.alive) continue;
+            const d = dist(a.x, a.y, b.x, b.y);
+            if (d > reach2) continue;
+            if (b.strategy === 'hunter') {
+              if (a.strategy !== 'hunter' && d < threatDist) {
+                threat = b;
+                threatDist = d;
+              }
+            } else if (
+              a.strategy !== 'hunter' &&
+              b.strategy === a.strategy &&
+              Math.abs(b.genome.hue - a.genome.hue) < 42
+            ) {
+              if (d < mateDist) {
+                mate = b;
+                mateDist = d;
+              }
+            }
+          }
+        }
+      }
+
       // 朝向目标
       let dx = 0;
       let dy = 0;
@@ -869,6 +937,55 @@ export class Simulation {
       a.wander += rand(-0.35, 0.35);
       dx += Math.cos(a.wander) * 0.45;
       dy += Math.sin(a.wander) * 0.45;
+
+      /* ── agent 的意志叠在基因之上 ──
+         agent 决定「先顾哪头」，基因决定「顾不顾得上」。
+         影响力由玩家调节：调 0 就退回纯基因演化。 */
+      if (mindDecision && mindInfluence > 0) {
+        const d = mindDecision;
+        const k = mindInfluence;
+
+        // 逃命：远离最近的猎人
+        if (threat && (d.target === 'threat' || d.action === 'flee')) {
+          this.onMemory(a, '被猎手逼近');
+          const w = (2.1 + d.urgency * 2.8) * k * (0.35 + d.courage * 0.65);
+          dx -= ((threat.x - a.x) / (threatDist + 1)) * w;
+          dy -= ((threat.y - a.y) / (threatDist + 1)) * w;
+        }
+        // 猎杀：扑向猎物
+        if (prey && (d.target === 'prey' || d.action === 'hunt')) {
+          const w = (1.8 + d.aggression * 2.4) * k;
+          dx += ((prey.x - a.x) / (preyDist + 1)) * w;
+          dy += ((prey.y - a.y) / (preyDist + 1)) * w;
+        }
+        // 觅食：扑向最近的有机物
+        if (d.target === 'food' || d.action === 'seek_food') {
+          const f = this.nearestFood(a.x, a.y, sense * 1.4);
+          if (f) {
+            const w = (1.5 + d.urgency * 1.9) * k;
+            dx += ((f.item.x - a.x) / (f.d + 1)) * w;
+            dy += ((f.item.y - a.y) / (f.d + 1)) * w;
+          }
+        }
+        // 求偶：靠近同类
+        if (mate && (d.target === 'mate' || d.action === 'approach_mate')) {
+          const w = 1.5 * k;
+          dx += ((mate.x - a.x) / (mateDist + 1)) * w;
+          dy += ((mate.y - a.y) / (mateDist + 1)) * w;
+        }
+        // 合群：贴住同伴
+        if (friend && d.social > 0.42 && (d.target === 'friend' || d.action === 'stay')) {
+          const w = 1.25 * d.social * k;
+          dx += ((friend.x - a.x) / (friendDist + 1)) * w;
+          dy += ((friend.y - a.y) / (friendDist + 1)) * w;
+        }
+        // 探索：朝侧向漂移，离开拥挤区
+        if (d.explore > 0.34) {
+          const side = a.wander + (d.explore > 0.68 ? Math.PI * 0.5 : -Math.PI * 0.5);
+          dx += Math.cos(side) * d.explore * 1.05 * k;
+          dy += Math.sin(side) * d.explore * 1.05 * k;
+        }
+      }
 
       const mag = Math.hypot(dx, dy) || 1;
       a.vx = a.vx * 0.82 + (dx / mag) * speed * 0.18;
@@ -967,6 +1084,7 @@ export class Simulation {
       a.energy += gain;
       a.flash = 1;
       a.lastFeedTick = this.tick;
+      this.onMemory(a, '吃到食物');
 
       // 采集工把一部分收成存入群体共享池（群体感应让共享更高效）
       if (a.colonyId !== null && roleM && roleM.share > 0) {
@@ -1902,6 +2020,7 @@ export class Simulation {
     killer.energy = Math.min(killer.energy, 400);
     killer.kills++;
     killer.flash = 1;
+    this.onMemory(killer, `吃掉 #${victim.id}`);
     killer.digest = 14; // 捕食后进入消化期，防止无休止的杀戮循环
     // 捕食会反哺体型：大个头的猎手更容易吃掉猎物与同类
     killer.genome.size = clamp(killer.genome.size + 0.06, 2.4, 9);
@@ -1931,6 +2050,112 @@ export class Simulation {
       colony?.memberIds.delete(victim.id);
       colony?.roles.delete(victim.id);
     }
+  }
+
+  /* ───────── 心智层接口（实现 MindHost） ───────── */
+
+  aliveAgents(): Agent[] {
+    return this.agents.filter((a) => a.alive);
+  }
+
+  getMind(id: number): MindState | undefined {
+    return this.mindStates.get(id);
+  }
+
+  /** 给 agent 拍一张「处境卡」：它此刻看得见什么 */
+  observe(agent: Agent): MindContext {
+    const sense = this.senseOf(agent);
+    let preyDist: number | null = null;
+    let threatDist: number | null = null;
+    let friendDist: number | null = null;
+    let mateDist: number | null = null;
+    let foodDist: number | null = null;
+    let nPrey = 0;
+    let nHunter = 0;
+    let nSame = 0;
+    let nFood = 0;
+
+    for (const b of this.agentGrid.near(agent.x, agent.y)) {
+      if (b === agent || !b.alive) continue;
+      const d = dist(agent.x, agent.y, b.x, b.y);
+      if (d > sense * 1.3) continue;
+      if (b.strategy === 'hunter') {
+        nHunter++;
+        if (agent.strategy !== 'hunter' && (threatDist === null || d < threatDist)) threatDist = d;
+      } else if (b.strategy === agent.strategy) {
+        nSame++;
+        if (Math.abs(b.genome.hue - agent.genome.hue) < 42) {
+          if (mateDist === null || d < mateDist) mateDist = d;
+          if (friendDist === null || d < friendDist) friendDist = d;
+        }
+      } else {
+        nPrey++;
+        if (preyDist === null || d < preyDist) preyDist = d;
+      }
+    }
+
+    for (const item of this.foodGrid.near(agent.x, agent.y)) {
+      if (item.dead) continue;
+      const d = dist(agent.x, agent.y, item.x, item.y);
+      if (d > sense * 1.5) continue;
+      nFood++;
+      if (foodDist === null || d < foodDist) foodDist = d;
+    }
+
+    return {
+      energy: agent.energy,
+      energyMax: 120,
+      age: agent.age,
+      generation: agent.generation,
+      size: agent.genome.size,
+      organelles: agent.genome.organelles.map((o) => ORGANELLES[o]?.zh ?? o),
+      strategyZh: STRATEGIES[agent.strategy].zh,
+      preyDist,
+      threatDist,
+      friendDist,
+      mateDist,
+      foodDist,
+      nPrey,
+      nHunter,
+      nSame,
+      nFood,
+      canHunt:
+        agent.strategy === 'hunter' ||
+        agent.genome.organelles.includes('toxin') ||
+        agent.genome.organelles.includes('pseudopod'),
+      light: this.light,
+      temp: 8 + this.temperature * 34,
+      nutrient: this.nutrient,
+      sense,
+    };
+  }
+
+  /** agent 做出决策后的回调：偶尔写进编年史，让「灵光一现」被看见 */
+  onDecision(agent: Agent, d: MindDecision) {
+    const mind = this.mindStates.get(agent.id);
+    if (mind) mind.decision = d;
+    if (d.source !== 'llm') return;
+    if (d.action !== 'flee' && d.action !== 'hunt' && d.action !== 'approach_mate') return;
+    if (this.tick - (this.lastMindLogTick ?? -999) < 140) return;
+    this.lastMindLogTick = this.tick;
+    this.log(
+      'milestone',
+      `个体 #${agent.id} 的心智做出决定：${
+        d.action === 'flee' ? '逃命' : d.action === 'hunt' ? '猎杀' : '求偶'
+      }（${d.thought}）`,
+      `Agent #${agent.id} decided: ${d.action} (${d.thought})`,
+    );
+  }
+
+  /** agent 的记忆写入 */
+  onMemory(agent: Agent, text: string) {
+    this.scheduler.noteMemory(agent, text);
+  }
+
+  /** 由渲染循环每帧驱动一次：够额度就派一个 agent 去思考 */
+  pumpMinds() {
+    if (!this.scheduler.enabled) return;
+    this.scheduler.pump();
   }
 
   /** 取出并清空特效队列，供渲染层消费 */

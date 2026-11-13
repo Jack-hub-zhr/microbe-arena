@@ -9,6 +9,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { EcologyPie } from './EcologyPie';
 import { cx, useLiquidGlass, usePopReveal } from './ui/Glass';
 import {
+  IconAgent,
   IconBook,
   IconCells,
   IconChart,
@@ -20,6 +21,7 @@ import {
 } from './Icons';
 import LineageTree from './LineageTree';
 import GeoEventPanel from './GeoEventPanel';
+import AgentPanel from './AgentPanel';
 import { TraitIcon } from './TraitIcons';
 import {
   CELL_ROLES,
@@ -32,7 +34,15 @@ import type { OrganelleId } from '../engine/lineages';
 import type { Simulation } from '../engine/Simulation';
 import type { Agent, Strategy } from '../engine/types';
 
-export type DrawerTab = 'ecology' | 'lineage' | 'geo' | 'ranks' | 'codex' | 'chronicle' | 'cell';
+export type DrawerTab =
+  | 'ecology'
+  | 'lineage'
+  | 'geo'
+  | 'agents'
+  | 'ranks'
+  | 'codex'
+  | 'chronicle'
+  | 'cell';
 
 interface Props {
   open: boolean;
@@ -50,6 +60,7 @@ const TABS: { id: DrawerTab; icon: ReactNode; zh: string; en: string }[] = [
   { id: 'ecology', icon: <IconChart size={14} />, zh: '生态', en: 'Eco' },
   { id: 'lineage', icon: <IconSpark size={14} />, zh: '演化', en: 'Tree' },
   { id: 'geo', icon: <IconGlobe size={14} />, zh: '地球史', en: 'Earth' },
+  { id: 'agents', icon: <IconAgent size={14} />, zh: '智能体', en: 'Agents' },
   { id: 'ranks', icon: <IconTrophy size={14} />, zh: '榜单', en: 'Ranks' },
   { id: 'codex', icon: <IconBook size={14} />, zh: '图鉴', en: 'Codex' },
   { id: 'chronicle', icon: <IconScroll size={14} />, zh: '编年', en: 'Log' },
@@ -191,6 +202,7 @@ export default function StatsDrawer({
             onFire={(t, d, h) => onGeoEvent?.(t, d, h)}
           />
         )}
+        {tab === 'agents' && <AgentPanel engine={engine} lang={lang} selected={selected} />}
         {tab === 'ranks' && <RanksTab engine={engine} lang={lang} />}
         {tab === 'codex' && <CodexTab engine={engine} lang={lang} />}
         {tab === 'chronicle' && <ChronicleTab engine={engine} lang={lang} />}

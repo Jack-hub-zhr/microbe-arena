@@ -16,6 +16,7 @@ import EnvPanel from './components/EnvPanel';
 import { EcologyPie } from './components/EcologyPie';
 import { cx } from './components/ui/Glass';
 import {
+  IconAgent,
   IconBook,
   IconChart,
   IconForward,
@@ -85,6 +86,8 @@ export default function App() {
         engine.step();
         n++;
       }
+      // 智能体调度：额度允许就派一个 agent 去思考（异步，不阻塞渲染）
+      engine.pumpMinds();
       void dt;
     };
     raf = requestAnimationFrame(loop);
@@ -330,6 +333,7 @@ export default function App() {
 
         {[
           { tab: 'geo' as DrawerTab, icon: <IconGlobe size={15} />, label: lang === 'zh' ? '地球史' : 'Earth', color: '#d9a441' },
+          { tab: 'agents' as DrawerTab, icon: <IconAgent size={15} />, label: lang === 'zh' ? '智能体' : 'Agents', color: '#a2db3c' },
           { tab: 'lineage' as DrawerTab, icon: <IconSpark size={15} />, label: lang === 'zh' ? '演化路线' : 'Lineage', color: '#d4748e' },
           { tab: 'ranks' as DrawerTab, icon: <IconTrophy size={15} />, label: lang === 'zh' ? '猎杀榜' : 'Ranks', color: '#e2663f' },
           { tab: 'codex' as DrawerTab, icon: <IconBook size={15} />, label: lang === 'zh' ? '图鉴' : 'Codex', color: '#84b96b' },

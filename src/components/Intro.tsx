@@ -29,6 +29,7 @@ const COPY = {
         { k: '生态位', v: '光合 / 化能 / 分解 / 共生 / 猎手' },
         { k: '演化创新', v: '21 项 · 各有真实代表生物' },
         { k: '多细胞', v: '三条真实路线 · 功能分化' },
+        { k: '智能体', v: '每个细胞一个 · LLM 代为决策' },
       ],
     },
     cards: [
@@ -73,6 +74,7 @@ const COPY = {
         { k: 'Niches', v: 'Photo / Chemo / Decomposer / Symbiote / Hunter' },
         { k: 'Innovations', v: '21, each with a real organism behind it' },
         { k: 'Multicellular', v: 'Three real routes, with cell specialisation' },
+        { k: 'Agents', v: 'One per cell · decided by an LLM' },
       ],
     },
     cards: [

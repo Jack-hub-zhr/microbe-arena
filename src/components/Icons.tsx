@@ -182,3 +182,34 @@ export const IconSpark = ({ size = 16, ...p }: P) => (
     <path d="M12 3.2 13.9 9l5.9 1.9-5.9 1.9L12 18.7l-1.9-5.9L4.2 10.9 10.1 9 12 3.2Z" />
   </svg>
 );
+
+export const IconAgent = ({ size = 16, ...p }: P) => (
+  <svg {...base(size)} {...p}>
+    <circle cx="12" cy="12" r="3.1" />
+    <circle cx="4.6" cy="5.4" r="1.7" />
+    <circle cx="19.4" cy="6.6" r="1.7" />
+    <circle cx="5" cy="19" r="1.7" />
+    <circle cx="19" cy="18.4" r="1.7" />
+    <path d="M6.1 6.7 9.7 10.3M17.9 7.9 14.5 10.6M6.2 17.7 9.6 14M17.8 17.2 14.5 14" />
+  </svg>
+);
+
+export const IconCheck = ({ size = 16, ...p }: P) => (
+  <svg {...base(size)} {...p}>
+    <path d="M4.5 12.5 9.5 17.5 19.5 6.5" />
+  </svg>
+);
+
+export const IconRefresh = ({ size = 16, ...p }: P) => (
+  <svg {...base(size)} {...p}>
+    <path d="M20 12a8 8 0 1 1-2.6-5.9" />
+    <path d="M20.2 3.8v4.6h-4.6" />
+  </svg>
+);
+
+export const IconSearch = ({ size = 16, ...p }: P) => (
+  <svg {...base(size)} {...p}>
+    <circle cx="10.8" cy="10.8" r="6.3" />
+    <path d="M15.4 15.4 20.5 20.5" />
+  </svg>
+);
