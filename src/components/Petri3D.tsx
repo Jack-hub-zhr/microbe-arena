@@ -355,6 +355,7 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
             attribute float aFlash;
             attribute float aThink;
             attribute float aRole;
+            uniform float uTime;
             attribute vec3 aColor;
             varying vec3 vLocal;
             varying vec3 vCellColor;
@@ -387,6 +388,9 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
             // 核心细胞更饱满
             float isCore = step(0.5, aRole) * step(aRole, 1.5);
             transformed.y *= 1.0 + isCore * 0.26;
+            // 正在思考的 agent：胀大并轻微搏动 —— 缩放到全景也能一眼捕捉
+            float thinkBeat = 0.5 + 0.5 * sin(uTime * 4.2 + aSeed * 6.2831);
+            transformed *= 1.0 + aThink * (0.10 + thinkBeat * 0.11);
 
             // 伪足：形变更强、轮廓更不规则（变形虫的样子）
             float isPseudopod = step(0.5, mod(floor(aFlags2 / 8.0), 2.0));
@@ -458,6 +462,9 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
             diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.02, 0.05, 0.04), eyeDisc * hasEye * 0.85);
             diffuseColor.rgb += vec3(0.9, 0.45, 0.95) * eyeRing * hasEye * 0.7;
 
+            // 智能体正在思考（或刚想完）：整体染上一层冷蓝，一眼可辨
+            diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.22, 0.42, 1.0), vThink * 0.55);
+
             // 芽孢休眠：整体变暗、中心透出耐热的孢核
             float isDormant = step(0.5, mod(floor(vFlags2 / 16.0), 2.0));
             diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.35 + vec3(0.06, 0.05, 0.02), isDormant * 0.8);
@@ -474,9 +481,12 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
             totalEmissiveRadiance += vCellColor * fres * 0.34;
             // 进食/受击闪光
             totalEmissiveRadiance += mix(vec3(1.0), vCellColor, 0.5) * vFlash * 2.4;
-            // 智能体正在等 LLM 回话：边缘一圈青白呼吸辉光（状态指示，不是装饰）
+            // 智能体正在等 LLM 回话：边缘一圈冷蓝呼吸辉光（状态指示，不是装饰）
             float thinkPulse = 0.5 + 0.5 * sin(uTime * 3.4);
-            totalEmissiveRadiance += vec3(0.30, 0.78, 0.92) * vThink * fres * (0.7 + thinkPulse * 0.7);
+            float thinkRim = pow(1.0 - abs(dot(nn, vd)), 1.35);
+            totalEmissiveRadiance += vec3(0.40, 0.68, 1.0) * vThink * thinkRim * (2.4 + thinkPulse * 2.4);
+            // 整个细胞自内而外亮起来，随思考节律明暗
+            totalEmissiveRadiance += vec3(0.16, 0.32, 0.95) * vThink * (0.55 + thinkPulse * 0.85);
             // 职能色环
             vec3 roleCol = vec3(0.0);
             if (vRole > 0.5 && vRole < 1.5) roleCol = vec3(1.0, 0.42, 0.84);
