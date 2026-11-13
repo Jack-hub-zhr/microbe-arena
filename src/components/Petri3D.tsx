@@ -319,6 +319,7 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
     const aSeed = new Float32Array(MAX_CELLS);
     const aFlags = new Float32Array(MAX_CELLS);
     const aFlash = new Float32Array(MAX_CELLS);
+    const aThink = new Float32Array(MAX_CELLS);
     const aRole = new Float32Array(MAX_CELLS);
     const aColor = new Float32Array(MAX_CELLS * 3);
     // 第二组标记位：触手 / 纤毛 / 眼点 / 伪足 / 休眠 / 收缩丝
@@ -327,6 +328,7 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
     cellGeo.setAttribute('aFlags', new THREE.InstancedBufferAttribute(aFlags, 1));
     cellGeo.setAttribute('aFlags2', new THREE.InstancedBufferAttribute(aFlags2, 1));
     cellGeo.setAttribute('aFlash', new THREE.InstancedBufferAttribute(aFlash, 1));
+    cellGeo.setAttribute('aThink', new THREE.InstancedBufferAttribute(aThink, 1));
     cellGeo.setAttribute('aRole', new THREE.InstancedBufferAttribute(aRole, 1));
     cellGeo.setAttribute('aColor', new THREE.InstancedBufferAttribute(aColor, 3));
 
@@ -351,6 +353,7 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
             attribute float aFlags;
             attribute float aFlags2;
             attribute float aFlash;
+            attribute float aThink;
             attribute float aRole;
             attribute vec3 aColor;
             varying vec3 vLocal;
@@ -359,6 +362,7 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
             varying float vFlags;
             varying float vFlags2;
             varying float vFlash;
+            varying float vThink;
             varying float vRole;
           `,
         )
@@ -394,6 +398,7 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
             vFlags = aFlags;
             vFlags2 = aFlags2;
             vFlash = aFlash;
+            vThink = aThink;
             vRole = aRole;
           `,
         );
@@ -410,6 +415,7 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
             varying float vFlags;
             varying float vFlags2;
             varying float vFlash;
+            varying float vThink;
             varying float vRole;
           `,
         )
@@ -467,6 +473,9 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
             totalEmissiveRadiance += vCellColor * fres * 0.34;
             // 进食/受击闪光
             totalEmissiveRadiance += mix(vec3(1.0), vCellColor, 0.5) * vFlash * 2.4;
+            // 智能体正在等 LLM 回话：边缘一圈青白呼吸辉光（状态指示，不是装饰）
+            float thinkPulse = 0.5 + 0.5 * sin(uTime * 3.4);
+            totalEmissiveRadiance += vec3(0.30, 0.78, 0.92) * vThink * fres * (0.7 + thinkPulse * 0.7);
             // 职能色环
             vec3 roleCol = vec3(0.0);
             if (vRole > 0.5 && vRole < 1.5) roleCol = vec3(1.0, 0.42, 0.84);
@@ -851,6 +860,8 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
 
       /* ── 微生物 ── */
       const agents = engine.agents;
+      // 正在等 LLM 回话的个体 —— 给它们一圈会呼吸的青白辉光
+      const thinking = engine.thinkingIds;
       let n = 0;
       let shellN = 0;
       let flagN = 0;
@@ -912,6 +923,7 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
           (dormant ? 16 : 0) |
           (a.genome.organelles.includes('myosin') ? 32 : 0);
         aFlash[n] = a.flash;
+        aThink[n] = thinking.has(a.id) ? 1 : a.thinkGlow;
         aRole[n] = roleIdx;
         aColor[n * 3] = colorTmp.r;
         aColor[n * 3 + 1] = colorTmp.g;
@@ -1003,6 +1015,7 @@ export default function Petri3D({ engine, toolRef, selectedId, onSelect }: Props
       (cellGeo.getAttribute('aSeed') as THREE.InstancedBufferAttribute).needsUpdate = true;
       (cellGeo.getAttribute('aFlags') as THREE.InstancedBufferAttribute).needsUpdate = true;
       (cellGeo.getAttribute('aFlash') as THREE.InstancedBufferAttribute).needsUpdate = true;
+      (cellGeo.getAttribute('aThink') as THREE.InstancedBufferAttribute).needsUpdate = true;
       (cellGeo.getAttribute('aRole') as THREE.InstancedBufferAttribute).needsUpdate = true;
       (cellGeo.getAttribute('aColor') as THREE.InstancedBufferAttribute).needsUpdate = true;
       (cellGeo.getAttribute('aFlags2') as THREE.InstancedBufferAttribute).needsUpdate = true;

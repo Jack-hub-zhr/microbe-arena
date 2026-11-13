@@ -65,6 +65,8 @@ export interface Agent {
   alien: boolean;
   /** 消化剩余 tick：刚进食完的猎手需要消化，不能立刻再次捕杀 */
   digest: number;
+  /** 思维余晖：刚做完决定（或正在等 LLM）的细胞会发光 */
+  thinkGlow: number;
 }
 
 export interface Food {

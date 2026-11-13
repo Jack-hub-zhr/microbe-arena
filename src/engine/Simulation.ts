@@ -445,6 +445,7 @@ export class Simulation {
       dormant: false,
       alien: false,
       digest: 0,
+      thinkGlow: 0,
     };
     this.byId.set(agent.id, agent);
     // 新生个体继承父母的性格（带变异），并立刻做一次本地决策
@@ -1044,6 +1045,7 @@ export class Simulation {
       }
 
       a.flash *= 0.9;
+      a.thinkGlow *= 0.94;
     }
 
     /* ── 2. 进食 ── */
@@ -2134,6 +2136,8 @@ export class Simulation {
   onDecision(agent: Agent, d: MindDecision) {
     const mind = this.mindStates.get(agent.id);
     if (mind) mind.decision = d;
+    // 思维余晖：让「刚刚开过脑」的细胞在培养皿里被一眼看见
+    agent.thinkGlow = 1;
     if (d.source !== 'llm') return;
     if (d.action !== 'flee' && d.action !== 'hunt' && d.action !== 'approach_mate') return;
     if (this.tick - (this.lastMindLogTick ?? -999) < 140) return;
@@ -2150,6 +2154,11 @@ export class Simulation {
   /** agent 的记忆写入 */
   onMemory(agent: Agent, text: string) {
     this.scheduler.noteMemory(agent, text);
+  }
+
+  /** 此刻正在等 LLM 回话的个体（渲染层高亮用） */
+  get thinkingIds(): ReadonlySet<number> {
+    return this.scheduler.pendingIds;
   }
 
   /** 由渲染循环每帧驱动一次：够额度就派一个 agent 去思考 */

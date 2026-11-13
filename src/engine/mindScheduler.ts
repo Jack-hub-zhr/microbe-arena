@@ -122,6 +122,8 @@ export class MindScheduler {
   feed: FeedEntry[] = [];
   /** 已经被 LLM 亲自决策过的个体 —— 「有多少个细胞真正开过脑」 */
   readonly llmAgents = new Set<number>();
+  /** 此刻正在等 LLM 回话的个体（渲染层用它们做高亮） */
+  readonly pendingIds = new Set<number>();
 
   /** 限流冷却：这段时间内一个请求都不发 */
   cooldownUntil = 0;
@@ -226,6 +228,7 @@ export class MindScheduler {
     if (!mind) return;
 
     mind.pending = true;
+    this.pendingIds.add(cand.id);
     this.inflight++;
 
     const ctx = host.observe(cand);
@@ -243,6 +246,7 @@ export class MindScheduler {
       .then((res) => {
         this.inflight--;
         mind.pending = false;
+        this.pendingIds.delete(cand.id);
         this.llmCalls++;
         this.tokens += res.tokens;
         this.latencies.push(res.latencyMs);
@@ -270,6 +274,7 @@ export class MindScheduler {
       .catch((err: unknown) => {
         this.inflight--;
         mind.pending = false;
+        this.pendingIds.delete(cand.id);
         const msg = err instanceof Error ? err.message : String(err);
         this.fallback(mind, ctx);
 
@@ -360,9 +365,12 @@ export class MindScheduler {
   stats(): SchedulerStats {
     const now = Date.now();
     const rpmUsed = this.requestTimes.filter((t) => now - t < 60_000).length;
-    const avg = this.latencies.length
-      ? Math.round(this.latencies.reduce((a, b) => a + b, 0) / this.latencies.length)
-      : 0;
+    // 用中位数：首个请求的冷启动不会把平均延迟拉成一个吓人的数字
+    let avg = 0;
+    if (this.latencies.length) {
+      const sorted = [...this.latencies].sort((a, b) => a - b);
+      avg = Math.round(sorted[Math.floor(sorted.length / 2)]);
+    }
     return {
       status: this.status,
       providerLabel: this.provider?.zh ?? '未选择',
